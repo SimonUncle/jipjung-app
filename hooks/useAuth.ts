@@ -64,6 +64,9 @@ export function useAuth() {
 
   // 이메일/비밀번호 회원가입
   const signUp = useCallback(async (email: string, password: string, nickname?: string) => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase가 설정되지 않았습니다.");
+    }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -80,6 +83,9 @@ export function useAuth() {
 
   // 이메일/비밀번호 로그인
   const signIn = useCallback(async (email: string, password: string) => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase가 설정되지 않았습니다.");
+    }
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -91,6 +97,9 @@ export function useAuth() {
 
   // Google 로그인
   const signInWithGoogle = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase가 설정되지 않았습니다.");
+    }
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -104,6 +113,9 @@ export function useAuth() {
 
   // Kakao 로그인
   const signInWithKakao = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase가 설정되지 않았습니다.");
+    }
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {
@@ -117,12 +129,18 @@ export function useAuth() {
 
   // 로그아웃
   const signOut = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase가 설정되지 않았습니다.");
+    }
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   }, []);
 
   // 비밀번호 재설정 이메일
   const resetPassword = useCallback(async (email: string) => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase가 설정되지 않았습니다.");
+    }
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     });
