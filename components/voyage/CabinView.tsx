@@ -293,7 +293,7 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
       {/* Porthole - centered, slightly bigger */}
       <div
         className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-10"
-        style={{ width: "min(55%, 50vh)", height: "min(55%, 50vh)" }}
+        style={{ width: "min(65%, 60vh)", height: "min(65%, 60vh)" }}
       >
         {/* Outer brass ring */}
         <div
