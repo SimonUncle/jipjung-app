@@ -29,10 +29,8 @@ export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps)
     return () => clearInterval(interval);
   }, []);
 
-  // 물방울 생성 (프리미엄 전용)
+  // 물방울 생성 (모든 객실에 적용, 프리미엄은 더 자주)
   useEffect(() => {
-    if (!isPremium) return;
-
     const createDrop = () => {
       const newDrop: WaterDrop = {
         id: Date.now() + Math.random(),
@@ -45,13 +43,16 @@ export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps)
       setWaterDrops((prev) => [...prev.slice(-5), newDrop]); // 최대 6개 유지
     };
 
-    // 3~8초마다 물방울 생성
+    // 프리미엄: 3~6초, 일반: 6~12초 마다 물방울 생성
+    const baseInterval = isPremium ? 3000 : 6000;
+    const randomRange = isPremium ? 3000 : 6000;
+
     const interval = setInterval(() => {
-      if (Math.random() > 0.4) createDrop();
-    }, 3000 + Math.random() * 5000);
+      if (Math.random() > 0.3) createDrop();
+    }, baseInterval + Math.random() * randomRange);
 
     // 첫 물방울
-    setTimeout(createDrop, 1000);
+    setTimeout(createDrop, 2000);
 
     return () => clearInterval(interval);
   }, [isPremium]);
@@ -63,6 +64,12 @@ export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps)
     return {
       transform: `rotate(${rollAngle}deg) perspective(500px) rotateX(${pitchAngle}deg)`,
     };
+  }, [time]);
+
+  // 바다 출렁임 (창문 밖 풍경)
+  const oceanBob = useMemo(() => {
+    const bobY = Math.sin(time * 0.7) * 3;
+    return { transform: `translateY(${bobY}px)` };
   }, [time]);
 
   // Time of day based on premium
@@ -106,9 +113,62 @@ export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps)
         }}
       />
 
-      {/* Porthole frame with ship rocking */}
+      {/* 왼쪽 가구 - 빨간 벨벳 의자 팔걸이 */}
+      <div className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-32 z-10">
+        <div
+          className="w-full h-full rounded-r-lg"
+          style={{
+            background: "linear-gradient(to right, #4a1c1c 0%, #8b2323 50%, #6b1a1a 100%)",
+            boxShadow: "2px 0 8px rgba(0,0,0,0.4)",
+          }}
+        />
+        {/* 팔걸이 상단 */}
+        <div
+          className="absolute top-0 left-0 right-0 h-4 rounded-tr-lg"
+          style={{
+            background: "linear-gradient(to bottom, #a52a2a, #8b2323)",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+          }}
+        />
+      </div>
+
+      {/* 오른쪽 가구 - 램프 테이블 */}
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-28 z-10 flex flex-col items-center">
+        {/* 램프 */}
+        <div className="relative mb-2">
+          <div
+            className="w-6 h-8 rounded-t-full"
+            style={{
+              background: "radial-gradient(ellipse at center, #ffd700 0%, #daa520 60%, #b8860b 100%)",
+              boxShadow: "0 0 15px rgba(255, 200, 50, 0.4)",
+            }}
+          />
+          <div className="w-2 h-3 bg-amber-900 mx-auto" />
+        </div>
+        {/* 사이드 테이블 */}
+        <div
+          className="w-8 h-16 rounded-t"
+          style={{
+            background: "linear-gradient(to right, #3d2817 0%, #5c3d2e 50%, #3d2817 100%)",
+            boxShadow: "2px 2px 8px rgba(0,0,0,0.5)",
+          }}
+        />
+      </div>
+
+      {/* 하단 선반/탁자 */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[70%] h-6 z-10">
+        <div
+          className="w-full h-full rounded-t"
+          style={{
+            background: "linear-gradient(to bottom, #5c3d2e 0%, #4a3222 100%)",
+            boxShadow: "0 -2px 8px rgba(0,0,0,0.3)",
+          }}
+        />
+      </div>
+
+      {/* Porthole frame with ship rocking - 크기 확대 */}
       <div
-        className="relative w-[85%] aspect-square max-w-[300px] transition-transform duration-300"
+        className="relative w-[90%] aspect-square max-w-[320px] transition-transform duration-300 z-0"
         style={shipRock}
       >
         {/* Outer frame ring */}
@@ -211,12 +271,13 @@ export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps)
                 }}
               />
 
-              {/* Ocean */}
+              {/* Ocean - 출렁임 효과 */}
               <div
-                className="absolute left-0 right-0 bottom-0"
+                className="absolute left-0 right-0 bottom-0 transition-transform duration-300"
                 style={{
-                  top: "50%",
+                  top: "48%",
                   background: `linear-gradient(to bottom, ${oceanColors.top}, ${oceanColors.bottom})`,
+                  ...oceanBob,
                 }}
               >
                 {/* Waves - more dynamic with occasional large waves */}
@@ -280,8 +341,8 @@ export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps)
                 }}
               />
 
-              {/* Water droplets (premium only) */}
-              {isPremium && waterDrops.map((drop) => (
+              {/* Water droplets (all cabins) */}
+              {waterDrops.map((drop) => (
                 <div
                   key={drop.id}
                   className="absolute rounded-full pointer-events-none"

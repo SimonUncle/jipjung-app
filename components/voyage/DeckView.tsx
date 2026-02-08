@@ -78,12 +78,12 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // 배 흔들림 (갑판이므로 더 강하게)
+  // 배 흔들림 (스케일 확대로 모서리 깨짐 방지)
   const shipRock = useMemo(() => {
-    const rollAngle = Math.sin(time * 0.6) * 2.5;
-    const pitchAngle = Math.sin(time * 0.35 + 0.8) * 1.5;
+    const rollAngle = Math.sin(time * 0.6) * 1.5; // 각도 줄임
+    const pitchAngle = Math.sin(time * 0.35 + 0.8) * 1.0;
     return {
-      transform: `rotate(${rollAngle}deg) perspective(400px) rotateX(${pitchAngle}deg)`,
+      transform: `scale(1.15) rotate(${rollAngle}deg) perspective(400px) rotateX(${pitchAngle}deg)`,
     };
   }, [time]);
 
@@ -122,8 +122,8 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
 
   return (
     <div className="relative w-full h-full min-h-[300px] overflow-hidden rounded-xl bg-slate-900">
-      {/* 전체 씬에 배 흔들림 적용 */}
-      <div className="absolute inset-0 transition-transform duration-200" style={shipRock}>
+      {/* 전체 씬에 배 흔들림 적용 - 확장해서 모서리 안 보이게 */}
+      <div className="absolute -inset-[10%] transition-transform duration-200" style={shipRock}>
         {/* 하늘 */}
         <div
           className="absolute inset-x-0 top-0"

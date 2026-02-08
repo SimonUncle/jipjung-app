@@ -38,10 +38,8 @@ export function OceanView({ progress, isPremium = false }: OceanViewProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // 물방울 생성 (프리미엄 전용)
+  // 물방울 생성 (모든 객실)
   useEffect(() => {
-    if (!isPremium) return;
-
     const createDrop = () => {
       const newDrop: WaterDrop = {
         id: Date.now() + Math.random(),
@@ -53,9 +51,13 @@ export function OceanView({ progress, isPremium = false }: OceanViewProps) {
       setWaterDrops((prev) => [...prev.slice(-4), newDrop]);
     };
 
+    // 프리미엄: 더 자주
+    const baseInterval = isPremium ? 3000 : 5000;
+    const randomRange = isPremium ? 3000 : 5000;
+
     const interval = setInterval(() => {
-      if (Math.random() > 0.5) createDrop();
-    }, 4000 + Math.random() * 4000);
+      if (Math.random() > 0.4) createDrop();
+    }, baseInterval + Math.random() * randomRange);
 
     setTimeout(createDrop, 2000);
     return () => clearInterval(interval);
@@ -90,6 +92,12 @@ export function OceanView({ progress, isPremium = false }: OceanViewProps) {
     return {
       transform: `rotate(${rollAngle}deg) perspective(600px) rotateX(${pitchAngle}deg)`,
     };
+  }, [time]);
+
+  // 바다 출렁임
+  const oceanBob = useMemo(() => {
+    const bobY = Math.sin(time * 0.6) * 4;
+    return { transform: `translateY(${bobY}px)` };
   }, [time]);
 
   // 시간대 결정 (프리미엄은 선셋)
@@ -202,12 +210,13 @@ export function OceanView({ progress, isPremium = false }: OceanViewProps) {
             }}
           />
 
-          {/* 바다 */}
+          {/* 바다 - 출렁임 효과 */}
           <div
-            className="absolute left-0 right-0 bottom-0"
+            className="absolute left-0 right-0 bottom-0 transition-transform duration-300"
             style={{
-              top: "50%",
+              top: "48%",
               background: `linear-gradient(to bottom, ${oceanColors.top}, ${oceanColors.bottom})`,
+              ...oceanBob,
             }}
           >
             {/* 파도 - 더 역동적으로 */}
@@ -304,8 +313,8 @@ export function OceanView({ progress, isPremium = false }: OceanViewProps) {
           }}
         />
 
-        {/* 물방울 (프리미엄 전용) */}
-        {isPremium && waterDrops.map((drop) => (
+        {/* 물방울 (모든 객실) */}
+        {waterDrops.map((drop) => (
           <div
             key={drop.id}
             className="absolute rounded-full pointer-events-none"
@@ -334,21 +343,57 @@ export function OceanView({ progress, isPremium = false }: OceanViewProps) {
       {/* 창틀 장식 - 하단 */}
       <div className="absolute bottom-0 left-0 right-0 h-3 bg-gradient-to-t from-amber-800 to-amber-900" />
 
-      {/* 커튼 (좌우) */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-6"
-        style={{
-          background: "linear-gradient(to right, #8b0000 0%, #a52a2a 70%, transparent 100%)",
-          opacity: 0.9,
-        }}
-      />
-      <div
-        className="absolute right-0 top-0 bottom-0 w-6"
-        style={{
-          background: "linear-gradient(to left, #8b0000 0%, #a52a2a 70%, transparent 100%)",
-          opacity: 0.9,
-        }}
-      />
+      {/* 커튼 (좌우) - 주름 텍스처 */}
+      <div className="absolute left-0 top-0 bottom-0 w-8 overflow-hidden">
+        {/* 커튼 주름 */}
+        {[...Array(4)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute top-0 bottom-0"
+            style={{
+              left: `${i * 25}%`,
+              width: "30%",
+              background: `linear-gradient(to right,
+                ${i % 2 === 0 ? "#6b0f0f" : "#8b2323"} 0%,
+                ${i % 2 === 0 ? "#8b2323" : "#a52a2a"} 50%,
+                ${i % 2 === 0 ? "#6b0f0f" : "#8b2323"} 100%)`,
+              boxShadow: i === 0 ? "none" : "inset 2px 0 4px rgba(0,0,0,0.3)",
+            }}
+          />
+        ))}
+        {/* 페이드 아웃 */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(to right, transparent 60%, #2d1f10 100%)",
+          }}
+        />
+      </div>
+      <div className="absolute right-0 top-0 bottom-0 w-8 overflow-hidden">
+        {/* 커튼 주름 */}
+        {[...Array(4)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute top-0 bottom-0"
+            style={{
+              right: `${i * 25}%`,
+              width: "30%",
+              background: `linear-gradient(to left,
+                ${i % 2 === 0 ? "#6b0f0f" : "#8b2323"} 0%,
+                ${i % 2 === 0 ? "#8b2323" : "#a52a2a"} 50%,
+                ${i % 2 === 0 ? "#6b0f0f" : "#8b2323"} 100%)`,
+              boxShadow: i === 0 ? "none" : "inset -2px 0 4px rgba(0,0,0,0.3)",
+            }}
+          />
+        ))}
+        {/* 페이드 아웃 */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(to left, transparent 60%, #2d1f10 100%)",
+          }}
+        />
+      </div>
 
       {/* 프리미엄 뱃지 */}
       {isPremium && (
@@ -357,10 +402,22 @@ export function OceanView({ progress, isPremium = false }: OceanViewProps) {
         </div>
       )}
 
-      {/* 테이블/음료 (하단 장식) */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-end gap-3 z-20">
-        <div className="text-2xl" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }}>
-          {isPremium ? "🍷" : "☕"}
+      {/* 테이블/음료 (하단 장식) - 더 리얼하게 */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20">
+        {/* 나무 테이블 */}
+        <div
+          className="w-24 h-5 rounded-t"
+          style={{
+            background: "linear-gradient(to bottom, #5c3d2e 0%, #4a3222 50%, #3d2817 100%)",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+          }}
+        />
+        {/* 음료와 장식 */}
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-end gap-2">
+          <div className="text-xl" style={{ filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.4))" }}>
+            {isPremium ? "🍷" : "☕"}
+          </div>
+          <div className="text-sm opacity-80">📖</div>
         </div>
       </div>
     </div>
