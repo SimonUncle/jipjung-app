@@ -630,71 +630,82 @@ export function createOceanWavesSound(): {
     const now = ctx.currentTime;
 
     // 파도 밀려오는 소리 (Brown noise + lowpass sweep)
-    const approachBuffer = createBrownNoiseBuffer(ctx, 2);
+    const approachBuffer = createBrownNoiseBuffer(ctx, 3);
     const approachSource = ctx.createBufferSource();
     approachSource.buffer = approachBuffer;
 
     const approachLowpass = ctx.createBiquadFilter();
     approachLowpass.type = "lowpass";
-    approachLowpass.frequency.setValueAtTime(100, now);
-    approachLowpass.frequency.linearRampToValueAtTime(400, now + 0.5);
+    approachLowpass.frequency.setValueAtTime(80, now);
+    approachLowpass.frequency.linearRampToValueAtTime(350, now + 0.8);
+    approachLowpass.frequency.linearRampToValueAtTime(500, now + 1.2);
 
     const approachGain = ctx.createGain();
     approachGain.gain.setValueAtTime(0, now);
-    approachGain.gain.linearRampToValueAtTime(0.12, now + 0.5);
-    approachGain.gain.linearRampToValueAtTime(0.15, now + 0.8);
+    approachGain.gain.linearRampToValueAtTime(0.08, now + 0.5);
+    approachGain.gain.linearRampToValueAtTime(0.12, now + 1.0);
+    approachGain.gain.linearRampToValueAtTime(0.06, now + 2.0);
+    approachGain.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
 
     approachSource.connect(approachLowpass);
     approachLowpass.connect(approachGain);
     approachGain.connect(ctx.destination);
     approachSource.start(now);
-    approachSource.stop(now + 2);
+    approachSource.stop(now + 3);
 
-    // 파도 부딪히는 소리 (White noise burst)
-    const crashBuffer = createNoiseBuffer(ctx, 0.8);
+    // 파도 부딪히는 소리 (White noise burst) - 더 긴 버퍼와 부드러운 페이드
+    const crashBuffer = createNoiseBuffer(ctx, 2.5);
     const crashSource = ctx.createBufferSource();
     crashSource.buffer = crashBuffer;
 
     const crashHighpass = ctx.createBiquadFilter();
     crashHighpass.type = "highpass";
-    crashHighpass.frequency.value = 1200;
+    crashHighpass.frequency.value = 800;
 
     const crashLowpass = ctx.createBiquadFilter();
     crashLowpass.type = "lowpass";
-    crashLowpass.frequency.value = 4000;
+    crashLowpass.frequency.setValueAtTime(4000, now + 0.8);
+    crashLowpass.frequency.linearRampToValueAtTime(2000, now + 2.5);
 
     const crashGain = ctx.createGain();
-    crashGain.gain.setValueAtTime(0, now + 0.5);
-    crashGain.gain.linearRampToValueAtTime(0.08, now + 0.55);
-    crashGain.gain.linearRampToValueAtTime(0.1, now + 0.7);
-    crashGain.gain.exponentialRampToValueAtTime(0.001, now + 1.3);
+    crashGain.gain.setValueAtTime(0, now + 0.8);
+    crashGain.gain.linearRampToValueAtTime(0.06, now + 0.9);
+    crashGain.gain.linearRampToValueAtTime(0.08, now + 1.1);
+    crashGain.gain.linearRampToValueAtTime(0.04, now + 1.8);
+    crashGain.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
 
     crashSource.connect(crashHighpass);
     crashHighpass.connect(crashLowpass);
     crashLowpass.connect(crashGain);
     crashGain.connect(ctx.destination);
-    crashSource.start(now + 0.5);
-    crashSource.stop(now + 1.5);
+    crashSource.start(now + 0.8);
+    crashSource.stop(now + 3);
 
-    // 파도 빠지는 소리 (receding)
-    const recedeBuffer = createBrownNoiseBuffer(ctx, 1.5);
+    // 파도 빠지는 소리 (receding) - 부드러운 페이드인/아웃
+    const recedeBuffer = createBrownNoiseBuffer(ctx, 4);
     const recedeSource = ctx.createBufferSource();
     recedeSource.buffer = recedeBuffer;
 
     const recedeLowpass = ctx.createBiquadFilter();
     recedeLowpass.type = "lowpass";
-    recedeLowpass.frequency.setValueAtTime(400, now + 0.8);
-    recedeLowpass.frequency.linearRampToValueAtTime(100, now + 2);
+    recedeLowpass.frequency.setValueAtTime(500, now + 1.2);
+    recedeLowpass.frequency.linearRampToValueAtTime(300, now + 2.5);
+    recedeLowpass.frequency.linearRampToValueAtTime(100, now + 4);
 
     const recedeGain = ctx.createGain();
-    recedeGain.gain.setValueAtTime(0.1, now + 0.8);
-    recedeGain.gain.exponentialRampToValueAtTime(0.001, now + 2);
+    // 부드러운 페이드인
+    recedeGain.gain.setValueAtTime(0, now + 1.2);
+    recedeGain.gain.linearRampToValueAtTime(0.06, now + 1.5);
+    recedeGain.gain.linearRampToValueAtTime(0.08, now + 2.0);
+    // 천천히 페이드아웃
+    recedeGain.gain.linearRampToValueAtTime(0.04, now + 3.0);
+    recedeGain.gain.exponentialRampToValueAtTime(0.001, now + 4.2);
 
     recedeSource.connect(recedeLowpass);
     recedeLowpass.connect(recedeGain);
     recedeGain.connect(ctx.destination);
-    recedeSource.start(now + 0.8);
-    recedeSource.stop(now + 2.2);
+    recedeSource.start(now + 1.2);
+    recedeSource.stop(now + 4.5);
   };
 
   // 다음 파도 예약
