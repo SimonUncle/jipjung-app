@@ -7,8 +7,19 @@ interface PortHoleViewProps {
   isPremium?: boolean;
 }
 
+// 물방울 타입
+interface WaterDrop {
+  id: number;
+  x: number;
+  startY: number;
+  speed: number;
+  size: number;
+  delay: number;
+}
+
 export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps) {
   const [time, setTime] = useState(0);
+  const [waterDrops, setWaterDrops] = useState<WaterDrop[]>([]);
 
   // Animation timer
   useEffect(() => {
@@ -17,6 +28,42 @@ export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps)
     }, 50);
     return () => clearInterval(interval);
   }, []);
+
+  // 물방울 생성 (프리미엄 전용)
+  useEffect(() => {
+    if (!isPremium) return;
+
+    const createDrop = () => {
+      const newDrop: WaterDrop = {
+        id: Date.now() + Math.random(),
+        x: 20 + Math.random() * 60, // 20~80% 위치
+        startY: -5,
+        speed: 0.8 + Math.random() * 0.4,
+        size: 2 + Math.random() * 2,
+        delay: 0,
+      };
+      setWaterDrops((prev) => [...prev.slice(-5), newDrop]); // 최대 6개 유지
+    };
+
+    // 3~8초마다 물방울 생성
+    const interval = setInterval(() => {
+      if (Math.random() > 0.4) createDrop();
+    }, 3000 + Math.random() * 5000);
+
+    // 첫 물방울
+    setTimeout(createDrop, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPremium]);
+
+  // 배 흔들림 계산 (roll + pitch)
+  const shipRock = useMemo(() => {
+    const rollAngle = Math.sin(time * 0.8) * 1.5; // 좌우 흔들림
+    const pitchAngle = Math.sin(time * 0.5 + 1) * 0.8; // 앞뒤 흔들림
+    return {
+      transform: `rotate(${rollAngle}deg) perspective(500px) rotateX(${pitchAngle}deg)`,
+    };
+  }, [time]);
 
   // Time of day based on premium
   const timeOfDay = isPremium ? "sunset" : "day";
@@ -59,8 +106,11 @@ export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps)
         }}
       />
 
-      {/* Porthole frame */}
-      <div className="relative w-[85%] aspect-square max-w-[300px]">
+      {/* Porthole frame with ship rocking */}
+      <div
+        className="relative w-[85%] aspect-square max-w-[300px] transition-transform duration-300"
+        style={shipRock}
+      >
         {/* Outer frame ring */}
         <div
           className="absolute inset-0 rounded-full"
@@ -169,32 +219,40 @@ export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps)
                   background: `linear-gradient(to bottom, ${oceanColors.top}, ${oceanColors.bottom})`,
                 }}
               >
-                {/* Waves */}
-                {[0, 1, 2].map((i) => (
-                  <svg
-                    key={i}
-                    className="absolute left-0 w-[200%] h-8"
-                    style={{
-                      top: `${10 + i * 28}%`,
-                      opacity: 0.4 - i * 0.1,
-                      transform: `translateX(${-25 + Math.sin(time * (0.6 + i * 0.2)) * 6}%)`,
-                    }}
-                    viewBox="0 0 1200 24"
-                    preserveAspectRatio="none"
-                  >
-                    <path
-                      d={`
-                        M 0 12
-                        Q 150 ${4 + Math.sin(time + i) * 6} 300 12
-                        Q 450 ${20 - Math.sin(time + i + 1) * 6} 600 12
-                        Q 750 ${4 + Math.sin(time + i + 2) * 6} 900 12
-                        Q 1050 ${20 - Math.sin(time + i + 3) * 6} 1200 12
-                        L 1200 24 L 0 24 Z
-                      `}
-                      fill={isPremium ? "rgba(255, 180, 100, 0.2)" : "rgba(255, 255, 255, 0.2)"}
-                    />
-                  </svg>
-                ))}
+                {/* Waves - more dynamic with occasional large waves */}
+                {[0, 1, 2].map((i) => {
+                  // 가끔 큰 파도 (시간 기반으로 주기적)
+                  const bigWaveMultiplier = Math.sin(time * 0.3 + i * 2) > 0.7 ? 1.4 : 1;
+                  const waveHeight = (4 + Math.sin(time + i) * 6) * bigWaveMultiplier;
+
+                  return (
+                    <svg
+                      key={i}
+                      className="absolute left-0 w-[200%]"
+                      style={{
+                        top: `${10 + i * 28}%`,
+                        height: `${32 * bigWaveMultiplier}px`,
+                        opacity: (0.4 - i * 0.1) * (bigWaveMultiplier > 1 ? 1.2 : 1),
+                        transform: `translateX(${-25 + Math.sin(time * (0.6 + i * 0.2)) * 8}%)`,
+                        transition: "height 0.5s ease-out",
+                      }}
+                      viewBox="0 0 1200 24"
+                      preserveAspectRatio="none"
+                    >
+                      <path
+                        d={`
+                          M 0 12
+                          Q 150 ${waveHeight} 300 12
+                          Q 450 ${24 - waveHeight} 600 12
+                          Q 750 ${waveHeight} 900 12
+                          Q 1050 ${24 - waveHeight} 1200 12
+                          L 1200 24 L 0 24 Z
+                        `}
+                        fill={isPremium ? "rgba(255, 180, 100, 0.25)" : "rgba(255, 255, 255, 0.25)"}
+                      />
+                    </svg>
+                  );
+                })}
 
                 {/* Sparkles on water */}
                 {[...Array(5)].map((_, i) => (
@@ -221,6 +279,23 @@ export function PortHoleView({ progress, isPremium = false }: PortHoleViewProps)
                   `,
                 }}
               />
+
+              {/* Water droplets (premium only) */}
+              {isPremium && waterDrops.map((drop) => (
+                <div
+                  key={drop.id}
+                  className="absolute rounded-full pointer-events-none"
+                  style={{
+                    left: `${drop.x}%`,
+                    top: `${drop.startY + ((time * drop.speed * 30) % 120)}%`,
+                    width: `${drop.size}px`,
+                    height: `${drop.size * 1.5}px`,
+                    background: "radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.6) 0%, rgba(200,220,255,0.3) 50%, transparent 70%)",
+                    opacity: 0.7,
+                    filter: "blur(0.3px)",
+                  }}
+                />
+              ))}
             </div>
           </div>
         </div>

@@ -613,7 +613,7 @@ export function resumeAudioContext() {
 // 항해 사운드
 // ============================
 
-// 파도 소리 생성
+// 파도 소리 생성 (배경 앰비언트 + 개별 파도 이벤트)
 export function createOceanWavesSound(): {
   start: () => void;
   stop: () => void;
@@ -621,16 +621,102 @@ export function createOceanWavesSound(): {
   const ctx = getAudioContext();
   let sources: AudioBufferSourceNode[] = [];
   let isPlaying = false;
+  let waveIntervalId: NodeJS.Timeout | null = null;
+
+  // 개별 파도 크래시 이벤트 재생
+  const playWaveCrash = () => {
+    if (!isPlaying) return;
+
+    const now = ctx.currentTime;
+
+    // 파도 밀려오는 소리 (Brown noise + lowpass sweep)
+    const approachBuffer = createBrownNoiseBuffer(ctx, 2);
+    const approachSource = ctx.createBufferSource();
+    approachSource.buffer = approachBuffer;
+
+    const approachLowpass = ctx.createBiquadFilter();
+    approachLowpass.type = "lowpass";
+    approachLowpass.frequency.setValueAtTime(100, now);
+    approachLowpass.frequency.linearRampToValueAtTime(400, now + 0.5);
+
+    const approachGain = ctx.createGain();
+    approachGain.gain.setValueAtTime(0, now);
+    approachGain.gain.linearRampToValueAtTime(0.12, now + 0.5);
+    approachGain.gain.linearRampToValueAtTime(0.15, now + 0.8);
+
+    approachSource.connect(approachLowpass);
+    approachLowpass.connect(approachGain);
+    approachGain.connect(ctx.destination);
+    approachSource.start(now);
+    approachSource.stop(now + 2);
+
+    // 파도 부딪히는 소리 (White noise burst)
+    const crashBuffer = createNoiseBuffer(ctx, 0.8);
+    const crashSource = ctx.createBufferSource();
+    crashSource.buffer = crashBuffer;
+
+    const crashHighpass = ctx.createBiquadFilter();
+    crashHighpass.type = "highpass";
+    crashHighpass.frequency.value = 1200;
+
+    const crashLowpass = ctx.createBiquadFilter();
+    crashLowpass.type = "lowpass";
+    crashLowpass.frequency.value = 4000;
+
+    const crashGain = ctx.createGain();
+    crashGain.gain.setValueAtTime(0, now + 0.5);
+    crashGain.gain.linearRampToValueAtTime(0.08, now + 0.55);
+    crashGain.gain.linearRampToValueAtTime(0.1, now + 0.7);
+    crashGain.gain.exponentialRampToValueAtTime(0.001, now + 1.3);
+
+    crashSource.connect(crashHighpass);
+    crashHighpass.connect(crashLowpass);
+    crashLowpass.connect(crashGain);
+    crashGain.connect(ctx.destination);
+    crashSource.start(now + 0.5);
+    crashSource.stop(now + 1.5);
+
+    // 파도 빠지는 소리 (receding)
+    const recedeBuffer = createBrownNoiseBuffer(ctx, 1.5);
+    const recedeSource = ctx.createBufferSource();
+    recedeSource.buffer = recedeBuffer;
+
+    const recedeLowpass = ctx.createBiquadFilter();
+    recedeLowpass.type = "lowpass";
+    recedeLowpass.frequency.setValueAtTime(400, now + 0.8);
+    recedeLowpass.frequency.linearRampToValueAtTime(100, now + 2);
+
+    const recedeGain = ctx.createGain();
+    recedeGain.gain.setValueAtTime(0.1, now + 0.8);
+    recedeGain.gain.exponentialRampToValueAtTime(0.001, now + 2);
+
+    recedeSource.connect(recedeLowpass);
+    recedeLowpass.connect(recedeGain);
+    recedeGain.connect(ctx.destination);
+    recedeSource.start(now + 0.8);
+    recedeSource.stop(now + 2.2);
+  };
+
+  // 다음 파도 예약
+  const scheduleNextWave = () => {
+    if (!isPlaying) return;
+    // 5~12초 랜덤 간격
+    const delay = 5000 + Math.random() * 7000;
+    waveIntervalId = setTimeout(() => {
+      playWaveCrash();
+      scheduleNextWave();
+    }, delay);
+  };
 
   const start = () => {
     if (isPlaying) return;
     isPlaying = true;
 
-    // 메인 게인
+    // 메인 게인 (배경 앰비언트는 더 작게)
     const mainGain = ctx.createGain();
-    mainGain.gain.value = 0.08;
+    mainGain.gain.value = 0.04; // 기존 0.08에서 절반으로 감소
 
-    // 레이어 1: 저주파 파도 (브라운 노이즈)
+    // 레이어 1: 저주파 배경 바다 소리 (브라운 노이즈)
     const waveBuffer = createBrownNoiseBuffer(ctx, 4);
     const waveSource = ctx.createBufferSource();
     waveSource.buffer = waveBuffer;
@@ -643,11 +729,11 @@ export function createOceanWavesSound(): {
     const waveGain = ctx.createGain();
     waveGain.gain.value = 0.5;
 
-    // LFO로 파도 리듬 (3-5초 주기)
+    // LFO로 미세한 변화
     const waveLfo = ctx.createOscillator();
     const waveLfoGain = ctx.createGain();
-    waveLfo.frequency.value = 0.25; // ~4초 주기
-    waveLfoGain.gain.value = 0.4;
+    waveLfo.frequency.value = 0.15;
+    waveLfoGain.gain.value = 0.2;
     waveLfo.connect(waveLfoGain);
     waveLfoGain.connect(waveGain.gain);
     waveLfo.start();
@@ -656,38 +742,37 @@ export function createOceanWavesSound(): {
     lowpass.connect(waveGain);
     waveGain.connect(mainGain);
 
-    // 레이어 2: 파도 부서지는 소리 (화이트 노이즈)
-    const crashBuffer = createNoiseBuffer(ctx, 2);
-    const crashSource = ctx.createBufferSource();
-    crashSource.buffer = crashBuffer;
-    crashSource.loop = true;
+    // 레이어 2: 미세한 배경 쉬~소리
+    const ambientBuffer = createNoiseBuffer(ctx, 2);
+    const ambientSource = ctx.createBufferSource();
+    ambientSource.buffer = ambientBuffer;
+    ambientSource.loop = true;
 
-    const highpass = ctx.createBiquadFilter();
-    highpass.type = "highpass";
-    highpass.frequency.value = 1500;
+    const ambientHighpass = ctx.createBiquadFilter();
+    ambientHighpass.type = "highpass";
+    ambientHighpass.frequency.value = 2000;
 
-    const crashGain = ctx.createGain();
-    crashGain.gain.value = 0.15;
+    const ambientGain = ctx.createGain();
+    ambientGain.gain.value = 0.08;
 
-    // 다른 LFO
-    const crashLfo = ctx.createOscillator();
-    const crashLfoGain = ctx.createGain();
-    crashLfo.frequency.value = 0.2;
-    crashLfoGain.gain.value = 0.12;
-    crashLfo.connect(crashLfoGain);
-    crashLfoGain.connect(crashGain.gain);
-    crashLfo.start();
-
-    crashSource.connect(highpass);
-    highpass.connect(crashGain);
-    crashGain.connect(mainGain);
+    ambientSource.connect(ambientHighpass);
+    ambientHighpass.connect(ambientGain);
+    ambientGain.connect(mainGain);
 
     mainGain.connect(ctx.destination);
 
     waveSource.start();
-    crashSource.start();
+    ambientSource.start();
 
-    sources = [waveSource, crashSource];
+    sources = [waveSource, ambientSource];
+
+    // 첫 파도는 2~4초 후에
+    setTimeout(() => {
+      if (isPlaying) {
+        playWaveCrash();
+        scheduleNextWave();
+      }
+    }, 2000 + Math.random() * 2000);
   };
 
   const stop = () => {
@@ -698,6 +783,11 @@ export function createOceanWavesSound(): {
       });
       sources = [];
       isPlaying = false;
+
+      if (waveIntervalId) {
+        clearTimeout(waveIntervalId);
+        waveIntervalId = null;
+      }
     }
   };
 

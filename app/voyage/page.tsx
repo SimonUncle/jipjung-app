@@ -4,6 +4,7 @@ import { useEffect, useCallback, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { PortHoleView } from "@/components/voyage/PortHoleView";
+import { DeckView } from "@/components/voyage/DeckView";
 
 // Dynamic imports for map components to avoid SSR issues
 const LeafletMap = dynamic(
@@ -38,7 +39,7 @@ import { vibrateSuccess, vibrateFail, vibratePause } from "@/lib/vibration";
 import { notifyVoyageComplete } from "@/lib/notifications";
 import { Ship, Anchor, ArrowRight, Map, Eye, Navigation } from "lucide-react";
 
-type ViewMode = "map" | "chase" | "cabin";
+type ViewMode = "map" | "chase" | "cabin" | "deck";
 
 export default function VoyagePage() {
   const router = useRouter();
@@ -258,8 +259,13 @@ export default function VoyagePage() {
               seaRoute={seaRoute}
               progress={progress}
             />
-          ) : (
+          ) : viewMode === "cabin" ? (
             <PortHoleView
+              progress={progress}
+              isPremium={cabinType === "premium"}
+            />
+          ) : (
+            <DeckView
               progress={progress}
               isPremium={cabinType === "premium"}
             />
@@ -303,6 +309,17 @@ export default function VoyagePage() {
           >
             <Eye className="w-4 h-4" />
             선실
+          </button>
+          <button
+            onClick={() => setViewMode("deck")}
+            className={`flex-1 py-2.5 min-h-[44px] rounded-xl font-medium text-sm flex items-center justify-center gap-1.5 transition-all
+              ${viewMode === "deck"
+                ? "bg-cyan-500 text-white shadow-lg shadow-cyan-500/30"
+                : "bg-white/10 text-white/60 hover:bg-white/20"
+              }`}
+          >
+            <Ship className="w-4 h-4" />
+            갑판
           </button>
         </div>
 
