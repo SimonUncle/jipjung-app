@@ -187,10 +187,10 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
         />
       </div>
 
-      {/* Porthole - centered, not cut off */}
+      {/* Porthole - centered */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 z-10"
-        style={{ top: "18%", width: "40%", aspectRatio: "1" }}
+        className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-10"
+        style={{ width: "50%", aspectRatio: "1" }}
       >
         {/* Outer brass ring */}
         <div
@@ -350,93 +350,6 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
             className="absolute inset-0 pointer-events-none rounded-full"
             style={{
               background: "linear-gradient(145deg, rgba(255,255,255,0.15) 0%, transparent 40%)",
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Barrel - Left (SVG) */}
-      <div className="absolute left-4 bottom-[18%] z-20">
-        <svg width="32" height="40" viewBox="0 0 32 40">
-          {/* Barrel body */}
-          <ellipse cx="16" cy="36" rx="14" ry="4" fill="#4a3520" />
-          <path d="M2 8 Q0 20 2 32 L30 32 Q32 20 30 8 Z" fill="url(#barrelGrad)" />
-          <ellipse cx="16" cy="8" rx="14" ry="4" fill="#6b4c30" />
-          {/* Metal bands */}
-          <rect x="1" y="12" width="30" height="3" rx="1" fill="#5a5a5a" opacity="0.8" />
-          <rect x="1" y="25" width="30" height="3" rx="1" fill="#5a5a5a" opacity="0.8" />
-          <defs>
-            <linearGradient id="barrelGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#5a3d25" />
-              <stop offset="30%" stopColor="#7a5535" />
-              <stop offset="70%" stopColor="#7a5535" />
-              <stop offset="100%" stopColor="#5a3d25" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-
-      {/* Barrel - Right (SVG) */}
-      <div className="absolute right-4 bottom-[18%] z-20">
-        <svg width="32" height="40" viewBox="0 0 32 40">
-          <ellipse cx="16" cy="36" rx="14" ry="4" fill="#4a3520" />
-          <path d="M2 8 Q0 20 2 32 L30 32 Q32 20 30 8 Z" fill="url(#barrelGrad2)" />
-          <ellipse cx="16" cy="8" rx="14" ry="4" fill="#6b4c30" />
-          <rect x="1" y="12" width="30" height="3" rx="1" fill="#5a5a5a" opacity="0.8" />
-          <rect x="1" y="25" width="30" height="3" rx="1" fill="#5a5a5a" opacity="0.8" />
-          <defs>
-            <linearGradient id="barrelGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#5a3d25" />
-              <stop offset="30%" stopColor="#7a5535" />
-              <stop offset="70%" stopColor="#7a5535" />
-              <stop offset="100%" stopColor="#5a3d25" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-
-      {/* Coiled Rope - decorative (SVG) */}
-      <div className="absolute left-10 bottom-[22%] z-15">
-        <svg width="24" height="20" viewBox="0 0 24 20">
-          <ellipse cx="12" cy="14" rx="10" ry="5" fill="none" stroke="#8b7355" strokeWidth="3" />
-          <ellipse cx="12" cy="10" rx="8" ry="4" fill="none" stroke="#9b8365" strokeWidth="3" />
-          <ellipse cx="12" cy="7" rx="5" ry="2.5" fill="none" stroke="#ab9375" strokeWidth="2" />
-        </svg>
-      </div>
-
-      {/* Bed area (bottom 16%) */}
-      <div className="absolute bottom-0 left-0 right-0 h-[16%] z-10">
-        {/* Bed cover */}
-        <div
-          className="absolute inset-x-2 top-2 bottom-0 rounded-t-lg"
-          style={{
-            background: "linear-gradient(to bottom, #2a4a6a 0%, #1e3a52 100%)",
-            boxShadow: "inset 0 3px 10px rgba(0,0,0,0.35)",
-          }}
-        />
-
-        {/* Blanket fold detail */}
-        <div
-          className="absolute left-2 right-2 top-2 h-3 rounded-t-lg"
-          style={{
-            background: "linear-gradient(to bottom, #3a5a7a, #2a4a6a)",
-          }}
-        />
-
-        {/* Pillows */}
-        <div className="absolute left-4 top-0 flex gap-1">
-          <div
-            className="w-10 h-5 rounded-md"
-            style={{
-              background: "linear-gradient(to bottom, #f5f5f0 0%, #e0e0d8 100%)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-            }}
-          />
-          <div
-            className="w-10 h-5 rounded-md"
-            style={{
-              background: "linear-gradient(to bottom, #f5f5f0 0%, #e0e0d8 100%)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
             }}
           />
         </div>
