@@ -642,9 +642,9 @@ export function createOceanWavesSound(): {
 
     const approachGain = ctx.createGain();
     approachGain.gain.setValueAtTime(0, now);
-    approachGain.gain.linearRampToValueAtTime(0.08, now + 0.5);
-    approachGain.gain.linearRampToValueAtTime(0.12, now + 1.0);
-    approachGain.gain.linearRampToValueAtTime(0.06, now + 2.0);
+    approachGain.gain.linearRampToValueAtTime(0.04, now + 0.5);
+    approachGain.gain.linearRampToValueAtTime(0.06, now + 1.0);
+    approachGain.gain.linearRampToValueAtTime(0.03, now + 2.0);
     approachGain.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
 
     approachSource.connect(approachLowpass);
@@ -669,9 +669,9 @@ export function createOceanWavesSound(): {
 
     const crashGain = ctx.createGain();
     crashGain.gain.setValueAtTime(0, now + 0.8);
-    crashGain.gain.linearRampToValueAtTime(0.06, now + 0.9);
-    crashGain.gain.linearRampToValueAtTime(0.08, now + 1.1);
-    crashGain.gain.linearRampToValueAtTime(0.04, now + 1.8);
+    crashGain.gain.linearRampToValueAtTime(0.03, now + 0.9);
+    crashGain.gain.linearRampToValueAtTime(0.04, now + 1.1);
+    crashGain.gain.linearRampToValueAtTime(0.02, now + 1.8);
     crashGain.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
 
     crashSource.connect(crashHighpass);
@@ -695,10 +695,10 @@ export function createOceanWavesSound(): {
     const recedeGain = ctx.createGain();
     // 부드러운 페이드인
     recedeGain.gain.setValueAtTime(0, now + 1.2);
-    recedeGain.gain.linearRampToValueAtTime(0.06, now + 1.5);
-    recedeGain.gain.linearRampToValueAtTime(0.08, now + 2.0);
+    recedeGain.gain.linearRampToValueAtTime(0.03, now + 1.5);
+    recedeGain.gain.linearRampToValueAtTime(0.04, now + 2.0);
     // 천천히 페이드아웃
-    recedeGain.gain.linearRampToValueAtTime(0.04, now + 3.0);
+    recedeGain.gain.linearRampToValueAtTime(0.02, now + 3.0);
     recedeGain.gain.exponentialRampToValueAtTime(0.001, now + 4.2);
 
     recedeSource.connect(recedeLowpass);

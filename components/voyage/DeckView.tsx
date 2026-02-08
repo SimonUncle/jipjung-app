@@ -78,20 +78,11 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // 배 흔들림 (스케일 확대로 모서리 깨짐 방지)
-  const shipRock = useMemo(() => {
-    const rollAngle = Math.sin(time * 0.6) * 1.5; // 각도 줄임
-    const pitchAngle = Math.sin(time * 0.35 + 0.8) * 1.0;
-    return {
-      transform: `scale(1.15) rotate(${rollAngle}deg) perspective(400px) rotateX(${pitchAngle}deg)`,
-    };
+  // 배 흔들림 - 회전 제거, 수평선만 움직임으로 표현
+  const horizonOffset = useMemo(() => {
+    return Math.sin(time * 0.6) * 8; // 수평선 Y 오프셋
   }, [time]);
 
-  // 수평선 기울기 (배 흔들림 반대로)
-  const horizonTilt = useMemo(() => {
-    const angle = -Math.sin(time * 0.6) * 2;
-    return { transform: `rotate(${angle}deg)` };
-  }, [time]);
 
   // 시간대
   const timeOfDay = isPremium ? "sunset" : "day";
@@ -122,19 +113,18 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
 
   return (
     <div className="relative w-full h-full min-h-[300px] overflow-hidden rounded-xl bg-slate-900">
-      {/* 전체 씬에 배 흔들림 적용 - 확장해서 모서리 안 보이게 */}
-      <div className="absolute -inset-[10%] transition-transform duration-200" style={shipRock}>
-        {/* 하늘 */}
+      {/* 전체 씬 - 회전 없이 고정 */}
+      <div className="absolute inset-0">
+        {/* 하늘 - 수평선 움직임으로 배 흔들림 표현 */}
         <div
-          className="absolute inset-x-0 top-0"
+          className="absolute inset-x-0 transition-all duration-300"
           style={{
-            height: "45%",
+            top: `${-5 + horizonOffset}%`,
+            height: "55%",
             background: `linear-gradient(to bottom,
               ${skyColors.top} 0%,
               ${skyColors.middle} 50%,
               ${skyColors.bottom} 100%)`,
-            ...horizonTilt,
-            transformOrigin: "center bottom",
           }}
         >
           {/* 태양/석양 */}
@@ -218,23 +208,22 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
 
         {/* 수평선 */}
         <div
-          className="absolute left-0 right-0"
+          className="absolute left-0 right-0 transition-all duration-300"
           style={{
-            top: "45%",
+            top: `${45 + horizonOffset}%`,
             height: "3px",
             background: isPremium
               ? "linear-gradient(to right, transparent, rgba(255,180,100,0.5), transparent)"
               : "linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent)",
-            ...horizonTilt,
-            transformOrigin: "center center",
           }}
         />
 
         {/* 바다 */}
         <div
-          className="absolute inset-x-0 bottom-0"
+          className="absolute inset-x-0 transition-all duration-300"
           style={{
-            top: "45%",
+            top: `${45 + horizonOffset}%`,
+            bottom: 0,
             background: `linear-gradient(to bottom,
               ${oceanColors.top} 0%,
               ${oceanColors.middle} 40%,
