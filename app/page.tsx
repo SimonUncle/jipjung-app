@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PortSelector } from "@/components/voyage/PortSelector";
-import { CabinSelector } from "@/components/voyage/CabinSelector";
-import { CabinType } from "@/types";
 import { FocusPurposeModal } from "@/components/voyage/FocusPurposeModal";
 import { CabinGrid } from "@/components/voyage/CabinGrid";
 import { BoardingPass } from "@/components/voyage/BoardingPass";
@@ -22,15 +20,17 @@ import { useAuthContext } from "@/components/auth/AuthProvider";
 import { LoginModal } from "@/components/auth/LoginModal";
 import { StreakBadge } from "@/components/home/StreakBadge";
 import { GoalProgress } from "@/components/home/GoalProgress";
+import { GoalSettingModal } from "@/components/home/GoalSettingModal";
 import { QuickStart } from "@/components/home/QuickStart";
 
 type BookingStep = "idle" | "purpose" | "cabin" | "confirm";
 
 export default function HomePage() {
   const router = useRouter();
-  const { data, isLoaded } = useLocalStorage();
+  const { data, isLoaded, setGoals } = useLocalStorage();
   const { user, isAuthenticated, signOut, isLoading: authLoading } = useAuthContext();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showGoalModal, setShowGoalModal] = useState(false);
 
   const {
     selectRoute,
@@ -44,12 +44,10 @@ export default function HomePage() {
   const {
     bookingDeparturePort,
     bookingDestinationPort,
-    bookingCabinType,
     bookingCustomMinutes,
     bookingIsCustomTime,
     setBookingDeparturePort,
     setBookingDestinationPort,
-    setBookingCabinType,
     setBookingCustomMinutes,
     setBookingIsCustomTime,
   } = useBookingStore();
@@ -71,7 +69,6 @@ export default function HomePage() {
   // 예약 선택 상태 (store에서 가져옴 - 페이지 이동해도 유지)
   const departurePort = bookingDeparturePort;
   const destinationPort = bookingDestinationPort;
-  const selectedCabin = bookingCabinType;
   const isCustomTime = bookingIsCustomTime;
   const customMinutes = bookingCustomMinutes;
 
@@ -124,7 +121,7 @@ export default function HomePage() {
     const seaRoute = await getSeaRoute(departurePort, destinationPort);
     setSeaRoute(seaRoute);
 
-    selectRoute(departurePort, destinationPort, selectedDuration, 0, selectedCabin);
+    selectRoute(departurePort, destinationPort, selectedDuration, 0);
     setCabinNumber(selectedCabinNumber);
     setFocusPurpose(selectedPurpose, customPurposeText ?? undefined);
     startVoyage();
@@ -160,7 +157,7 @@ export default function HomePage() {
     setSeaRoute(seaRoute);
 
     // 마지막 설정 사용
-    selectRoute(departurePort, lastDestination, lastVoyage.duration, 0, selectedCabin);
+    selectRoute(departurePort, lastDestination, lastVoyage.duration, 0);
     setCabinNumber(lastVoyage.cabinNumber || "A1");
     if (lastVoyage.focusPurposeId) {
       setFocusPurpose(
@@ -234,6 +231,7 @@ export default function HomePage() {
           dailyGoal={data.goals?.dailyMinutes || 60}
           weeklyMinutes={weeklyMinutes}
           weeklyGoal={data.goals?.weeklyMinutes || 300}
+          onEditGoal={() => setShowGoalModal(true)}
         />
       </div>
 
@@ -333,11 +331,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Cabin type */}
-        <CabinSelector
-          selected={selectedCabin}
-          onSelect={setBookingCabinType}
-        />
       </div>
 
       {/* Quick Start & Book button */}
@@ -426,7 +419,6 @@ export default function HomePage() {
       {/* Cabin Selection Modal */}
       <CabinGrid
         isOpen={bookingStep === "cabin"}
-        cabinType={selectedCabin}
         onSelect={handleSelectCabin}
         onClose={handleBackToPurpose}
       />
@@ -437,7 +429,6 @@ export default function HomePage() {
           departurePort={departurePort}
           arrivalPort={destinationPort}
           duration={selectedDuration}
-          cabinType={selectedCabin}
           cabinNumber={selectedCabinNumber}
           focusPurpose={selectedPurpose}
           customPurposeText={customPurposeText}
@@ -450,6 +441,15 @@ export default function HomePage() {
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
+      />
+
+      {/* Goal Setting Modal */}
+      <GoalSettingModal
+        isOpen={showGoalModal}
+        currentDailyGoal={data.goals?.dailyMinutes || 60}
+        currentWeeklyGoal={data.goals?.weeklyMinutes || 300}
+        onSave={setGoals}
+        onClose={() => setShowGoalModal(false)}
       />
     </div>
   );

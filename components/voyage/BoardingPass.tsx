@@ -3,14 +3,12 @@
 import { Port } from "@/lib/ports";
 import { getDistanceBetween } from "@/lib/routes";
 import { StoredFocusPurpose } from "@/stores/voyageStore";
-import { CabinType } from "@/types";
 import { Ship, Anchor } from "lucide-react";
 
 interface BoardingPassProps {
   departurePort: Port;
   arrivalPort: Port;
   duration: number;
-  cabinType: CabinType;
   cabinNumber: string | null;
   focusPurpose: StoredFocusPurpose | null;
   customPurposeText?: string | null;
@@ -27,7 +25,6 @@ export function BoardingPass({
   departurePort,
   arrivalPort,
   duration,
-  cabinType,
   cabinNumber,
   focusPurpose,
   customPurposeText,
@@ -108,9 +105,6 @@ export function BoardingPass({
                 </p>
                 <p className="text-xl font-bold font-mono text-white">
                   {cabinNumber ?? "-"}
-                </p>
-                <p className={`text-xs ${cabinType === "premium" ? "text-amber-400" : "text-slate-400"}`}>
-                  {cabinType === "premium" ? "Premium" : "Standard"}
                 </p>
               </div>
 

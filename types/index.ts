@@ -10,8 +10,8 @@ export type SessionStatus =
 export const TIMER_DURATIONS = [0.33, 1, 10, 30, 60] as const;
 export type TimerDuration = (typeof TIMER_DURATIONS)[number];
 
-// 캐빈 타입
-export const CABIN_TYPES = ["standard", "premium"] as const;
+// 캐빈 타입 (프리미엄 제거됨)
+export const CABIN_TYPES = ["standard"] as const;
 export type CabinType = (typeof CABIN_TYPES)[number];
 
 // 체크포인트 정보

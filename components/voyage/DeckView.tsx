@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useMemo } from "react";
 
+export type TimeOfDay = "day" | "sunset" | "night";
+
 interface DeckViewProps {
   progress: number;
-  isPremium?: boolean;
+  timeOfDay: TimeOfDay;
 }
 
 // 갈매기 타입
@@ -24,7 +26,7 @@ interface Splash {
   delay: number;
 }
 
-export function DeckView({ progress, isPremium = false }: DeckViewProps) {
+export function DeckView({ progress, timeOfDay }: DeckViewProps) {
   const [time, setTime] = useState(0);
   const [seagulls, setSeagulls] = useState<Seagull[]>([]);
   const [splashes, setSplashes] = useState<Splash[]>([]);
@@ -37,8 +39,10 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // 갈매기 생성
+  // 갈매기 생성 (낮/저녁만)
   useEffect(() => {
+    if (timeOfDay === "night") return;
+
     const createSeagull = () => {
       const fromRight = Math.random() > 0.5;
       const newSeagull: Seagull = {
@@ -58,7 +62,7 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
 
     setTimeout(createSeagull, 1500);
     return () => clearInterval(interval);
-  }, []);
+  }, [timeOfDay]);
 
   // 물보라 생성
   useEffect(() => {
@@ -84,31 +88,40 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
   }, [time]);
 
 
-  // 시간대
-  const timeOfDay = isPremium ? "sunset" : "day";
-
   // 하늘 색상
   const skyColors = useMemo(() => {
-    if (timeOfDay === "sunset") {
-      return {
-        top: "#0f0f23",
-        middle: "#ff6b35",
-        bottom: "#ffd93d",
-      };
+    switch (timeOfDay) {
+      case "sunset":
+        return {
+          top: "#0f0f23",
+          middle: "#ff6b35",
+          bottom: "#ffd93d",
+        };
+      case "night":
+        return {
+          top: "#050510",
+          middle: "#0a0a1a",
+          bottom: "#1a1a3a",
+        };
+      default: // day
+        return {
+          top: "#1e3a5f",
+          middle: "#4a90d9",
+          bottom: "#87ceeb",
+        };
     }
-    return {
-      top: "#1e3a5f",
-      middle: "#4a90d9",
-      bottom: "#87ceeb",
-    };
   }, [timeOfDay]);
 
   // 바다 색상
   const oceanColors = useMemo(() => {
-    if (timeOfDay === "sunset") {
-      return { top: "#1a3a5c", middle: "#0f2940", bottom: "#081825" };
+    switch (timeOfDay) {
+      case "sunset":
+        return { top: "#1a3a5c", middle: "#0f2940", bottom: "#081825" };
+      case "night":
+        return { top: "#0a1525", middle: "#060d15", bottom: "#030608" };
+      default: // day
+        return { top: "#1565c0", middle: "#0d47a1", bottom: "#0a3d62" };
     }
-    return { top: "#1565c0", middle: "#0d47a1", bottom: "#0a3d62" };
   }, [timeOfDay]);
 
   return (
@@ -127,26 +140,44 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
               ${skyColors.bottom} 100%)`,
           }}
         >
-          {/* 태양/석양 */}
+          {/* 태양/달 */}
           <div
             className="absolute"
             style={{
-              top: isPremium ? "30%" : "25%",
+              top: timeOfDay === "night" ? "20%" : timeOfDay === "sunset" ? "30%" : "25%",
               right: "20%",
-              width: isPremium ? "60px" : "50px",
-              height: isPremium ? "60px" : "50px",
+              width: timeOfDay === "night" ? "40px" : timeOfDay === "sunset" ? "60px" : "50px",
+              height: timeOfDay === "night" ? "40px" : timeOfDay === "sunset" ? "60px" : "50px",
               borderRadius: "50%",
-              background: isPremium
+              background: timeOfDay === "night"
+                ? "radial-gradient(circle, #e0e0e0 0%, #c0c0c0 50%, transparent 75%)"
+                : timeOfDay === "sunset"
                 ? "radial-gradient(circle, #ff6b35 0%, #ff4500 50%, transparent 75%)"
                 : "radial-gradient(circle, #fff9c4 0%, #ffd54f 50%, transparent 75%)",
-              filter: isPremium
+              filter: timeOfDay === "night"
+                ? "blur(1px) drop-shadow(0 0 25px rgba(200, 200, 255, 0.5))"
+                : timeOfDay === "sunset"
                 ? "blur(3px) drop-shadow(0 0 40px rgba(255, 100, 50, 0.9))"
                 : "blur(2px) drop-shadow(0 0 30px rgba(255, 200, 50, 0.7))",
             }}
           />
 
-          {/* 구름 */}
-          {[...Array(4)].map((_, i) => (
+          {/* 별 (밤에만) */}
+          {timeOfDay === "night" && [...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-white rounded-full"
+              style={{
+                top: `${5 + Math.random() * 60}%`,
+                left: `${5 + Math.random() * 90}%`,
+                opacity: 0.3 + Math.sin(time * 2 + i) * 0.4,
+                transform: `scale(${0.4 + Math.random() * 0.6})`,
+              }}
+            />
+          ))}
+
+          {/* 구름 (낮/저녁만) */}
+          {timeOfDay !== "night" && [...Array(4)].map((_, i) => (
             <svg
               key={i}
               className="absolute"
@@ -164,21 +195,21 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
                 cy="25"
                 rx="35"
                 ry="12"
-                fill={isPremium ? "rgba(255,180,120,0.5)" : "rgba(255,255,255,0.6)"}
+                fill={timeOfDay === "sunset" ? "rgba(255,180,120,0.5)" : "rgba(255,255,255,0.6)"}
               />
               <ellipse
                 cx="25"
                 cy="20"
                 rx="18"
                 ry="12"
-                fill={isPremium ? "rgba(255,180,120,0.5)" : "rgba(255,255,255,0.6)"}
+                fill={timeOfDay === "sunset" ? "rgba(255,180,120,0.5)" : "rgba(255,255,255,0.6)"}
               />
               <ellipse
                 cx="55"
                 cy="20"
                 rx="18"
                 ry="12"
-                fill={isPremium ? "rgba(255,180,120,0.5)" : "rgba(255,255,255,0.6)"}
+                fill={timeOfDay === "sunset" ? "rgba(255,180,120,0.5)" : "rgba(255,255,255,0.6)"}
               />
             </svg>
           ))}
@@ -212,7 +243,9 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
           style={{
             top: `${45 + horizonOffset}%`,
             height: "3px",
-            background: isPremium
+            background: timeOfDay === "night"
+              ? "linear-gradient(to right, transparent, rgba(100,100,150,0.3), transparent)"
+              : timeOfDay === "sunset"
               ? "linear-gradient(to right, transparent, rgba(255,180,100,0.5), transparent)"
               : "linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent)",
           }}
@@ -258,7 +291,13 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
                     Q 1312.5 ${20 + waveAmplitude} 1500 20
                     L 1500 40 L 0 40 Z
                   `}
-                  fill={isPremium ? "rgba(255, 150, 80, 0.25)" : "rgba(150, 200, 255, 0.25)"}
+                  fill={
+                    timeOfDay === "night"
+                      ? "rgba(100, 120, 180, 0.2)"
+                      : timeOfDay === "sunset"
+                      ? "rgba(255, 150, 80, 0.25)"
+                      : "rgba(150, 200, 255, 0.25)"
+                  }
                 />
               </svg>
             );
@@ -292,11 +331,27 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
               style={{
                 top: `${10 + (i % 4) * 20}%`,
                 left: `${10 + i * 11}%`,
-                opacity: Math.abs(Math.sin(time * 3 + i * 0.9)) * 0.7,
+                opacity: Math.abs(Math.sin(time * 3 + i * 0.9)) * (timeOfDay === "night" ? 0.4 : 0.7),
                 transform: `scale(${0.5 + Math.abs(Math.sin(time * 2.5 + i)) * 0.8})`,
               }}
             />
           ))}
+
+          {/* 달빛 반사 (밤에만) */}
+          {timeOfDay === "night" && (
+            <div
+              className="absolute"
+              style={{
+                top: "5%",
+                right: "18%",
+                width: "35px",
+                height: "80px",
+                background: "linear-gradient(to bottom, rgba(200,200,255,0.25), transparent)",
+                filter: "blur(10px)",
+                transform: `scaleX(${0.8 + Math.sin(time * 2) * 0.2})`,
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -359,19 +414,20 @@ export function DeckView({ progress, isPremium = false }: DeckViewProps) {
         </div>
       </div>
 
-      {/* 프리미엄 뱃지 */}
-      {isPremium && (
-        <div className="absolute top-3 right-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20">
-          DECK VIEW
-        </div>
-      )}
-
-      {/* 일반 뱃지 */}
-      {!isPremium && (
-        <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20">
-          DECK VIEW
-        </div>
-      )}
+      {/* 시간대 뱃지 */}
+      <div
+        className="absolute top-2 right-2 px-2 py-1 rounded-full text-[10px] font-bold z-20"
+        style={{
+          background: timeOfDay === "night"
+            ? "linear-gradient(to right, #1a1a3a, #2a2a4a)"
+            : timeOfDay === "sunset"
+            ? "linear-gradient(to right, #ff6b35, #ff8c42)"
+            : "linear-gradient(to right, #4a90d9, #5aa0e9)",
+          color: "white",
+        }}
+      >
+        {timeOfDay === "night" ? "🌙 NIGHT" : timeOfDay === "sunset" ? "🌅 SUNSET" : "☀️ DAY"}
+      </div>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useCallback, useState, useRef } from "react";
+import { useEffect, useCallback, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { PortHoleView } from "@/components/voyage/PortHoleView";
+import { CabinView, TimeOfDay } from "@/components/voyage/CabinView";
 import { DeckView } from "@/components/voyage/DeckView";
 
 // Dynamic imports for map components to avoid SSR issues
@@ -52,7 +52,6 @@ export default function VoyagePage() {
     departurePort,
     arrivalPort,
     selectedDuration,
-    cabinType,
     cabinNumber,
     focusPurpose,
     customPurposeText,
@@ -80,7 +79,18 @@ export default function VoyagePage() {
 
   const [showComplete, setShowComplete] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("map");
+  const [manualTimeOfDay, setManualTimeOfDay] = useState<TimeOfDay | null>(null);
   const vibrationEnabled = data.settings?.vibrationEnabled ?? true;
+
+  // Auto time of day based on progress (0-40% day, 40-70% sunset, 70-100% night)
+  const autoTimeOfDay = useMemo((): TimeOfDay => {
+    if (progress < 40) return "day";
+    if (progress < 70) return "sunset";
+    return "night";
+  }, [progress]);
+
+  // Current time of day (manual override or auto)
+  const timeOfDay = manualTimeOfDay ?? autoTimeOfDay;
 
   // Start voyage sounds on mount
   useEffect(() => {
@@ -260,14 +270,14 @@ export default function VoyagePage() {
               progress={progress}
             />
           ) : viewMode === "cabin" ? (
-            <PortHoleView
+            <CabinView
               progress={progress}
-              isPremium={cabinType === "premium"}
+              timeOfDay={timeOfDay}
             />
           ) : (
             <DeckView
               progress={progress}
-              isPremium={cabinType === "premium"}
+              timeOfDay={timeOfDay}
             />
           )}
         </div>
@@ -322,6 +332,51 @@ export default function VoyagePage() {
             갑판
           </button>
         </div>
+
+        {/* Time of day toggle (only for cabin/deck views) */}
+        {(viewMode === "cabin" || viewMode === "deck") && (
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setManualTimeOfDay(manualTimeOfDay === "day" ? null : "day")}
+              className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
+                ${timeOfDay === "day"
+                  ? "bg-sky-500/30 text-sky-200 border border-sky-400/50"
+                  : "bg-white/5 text-white/40 hover:bg-white/10"
+                }`}
+            >
+              ☀️ 낮
+              {manualTimeOfDay === null && autoTimeOfDay === "day" && (
+                <span className="text-[10px] opacity-60">(자동)</span>
+              )}
+            </button>
+            <button
+              onClick={() => setManualTimeOfDay(manualTimeOfDay === "sunset" ? null : "sunset")}
+              className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
+                ${timeOfDay === "sunset"
+                  ? "bg-orange-500/30 text-orange-200 border border-orange-400/50"
+                  : "bg-white/5 text-white/40 hover:bg-white/10"
+                }`}
+            >
+              🌅 저녁
+              {manualTimeOfDay === null && autoTimeOfDay === "sunset" && (
+                <span className="text-[10px] opacity-60">(자동)</span>
+              )}
+            </button>
+            <button
+              onClick={() => setManualTimeOfDay(manualTimeOfDay === "night" ? null : "night")}
+              className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
+                ${timeOfDay === "night"
+                  ? "bg-indigo-500/30 text-indigo-200 border border-indigo-400/50"
+                  : "bg-white/5 text-white/40 hover:bg-white/10"
+                }`}
+            >
+              🌙 밤
+              {manualTimeOfDay === null && autoTimeOfDay === "night" && (
+                <span className="text-[10px] opacity-60">(자동)</span>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* Progress bar */}
         <div className="bg-black/30 backdrop-blur-sm rounded-xl p-3">

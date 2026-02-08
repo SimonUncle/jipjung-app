@@ -1,24 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { getCabinsByType, type Cabin } from "@/lib/cabins";
-import { type CabinType } from "@/types";
+import { getAllCabins, type Cabin } from "@/lib/cabins";
 
 interface CabinGridProps {
   isOpen: boolean;
-  cabinType: CabinType;
   onSelect: (cabinNumber: string) => void;
   onClose: () => void;
 }
 
 export function CabinGrid({
   isOpen,
-  cabinType,
   onSelect,
   onClose,
 }: CabinGridProps) {
   const [selected, setSelected] = useState<string | null>(null);
-  const cabins = getCabinsByType(cabinType);
+  const cabins = getAllCabins();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Handle escape key
@@ -74,15 +71,11 @@ export function CabinGrid({
               <div>
                 <h2 id="cabin-grid-title" className="text-xl font-bold text-white">객실 선택</h2>
                 <p className="text-sm text-slate-400 mt-1">
-                  {cabinType === "premium" ? "프리미엄 (오션뷰)" : "일반"} 객실
+                  원하는 객실을 선택하세요
                 </p>
               </div>
-              <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                cabinType === "premium"
-                  ? "bg-amber-500/20 text-amber-400"
-                  : "bg-blue-500/20 text-blue-400"
-              }`}>
-                {cabinType === "premium" ? "Deck 1" : "Deck 2-3"}
+              <div className="px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-400">
+                Deck 1-3
               </div>
             </div>
           </div>
@@ -99,7 +92,7 @@ export function CabinGrid({
               {Object.entries(cabinsByDeck).map(([deck, deckCabins]) => (
                 <div key={deck} className="mb-4 last:mb-0">
                   <p className="text-xs text-slate-400 mb-2">Deck {deck}</p>
-                  <div role="radiogroup" aria-label={`Deck ${deck} 객실`} className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div role="radiogroup" aria-label={`Deck ${deck} 객실`} className="grid grid-cols-4 gap-2">
                     {deckCabins.map((cabin) => {
                       const isSelected = selected === cabin.number;
                       return (
@@ -107,16 +100,14 @@ export function CabinGrid({
                           key={cabin.number}
                           role="radio"
                           aria-checked={isSelected}
-                          aria-label={`객실 ${cabin.number}${cabin.isOceanView ? ", 오션뷰" : ""}`}
+                          aria-label={`객실 ${cabin.number}`}
                           onClick={() => setSelected(cabin.number)}
                           className={`
                             relative aspect-square rounded-lg border-2 transition-all duration-200
                             flex flex-col items-center justify-center
                             ${
                               isSelected
-                                ? cabinType === "premium"
-                                  ? "border-amber-400 bg-amber-500/30"
-                                  : "border-cyan-400 bg-cyan-500/30"
+                                ? "border-cyan-400 bg-cyan-500/30"
                                 : "border-white/20 bg-white/5 hover:bg-white/10"
                             }
                           `}
@@ -126,11 +117,6 @@ export function CabinGrid({
                           }`}>
                             {cabin.number}
                           </span>
-                          {cabin.isOceanView && (
-                            <span className="text-[10px] text-amber-400 mt-0.5">
-                              VIEW
-                            </span>
-                          )}
                         </button>
                       );
                     })}
@@ -151,9 +137,7 @@ export function CabinGrid({
                 <span className="text-xs text-slate-400">선택 가능</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded ${
-                  cabinType === "premium" ? "bg-amber-500/30 border border-amber-400" : "bg-cyan-500/30 border border-cyan-400"
-                }`} />
+                <div className="w-4 h-4 rounded bg-cyan-500/30 border border-cyan-400" />
                 <span className="text-xs text-slate-400">선택됨</span>
               </div>
             </div>
