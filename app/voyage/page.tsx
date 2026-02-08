@@ -4,6 +4,7 @@ import { useEffect, useCallback, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { CabinView, TimeOfDay } from "@/components/voyage/CabinView";
+import { TimeMode } from "@/types";
 import { DeckView } from "@/components/voyage/DeckView";
 
 // Dynamic imports for map components to avoid SSR issues
@@ -43,7 +44,7 @@ type ViewMode = "map" | "chase" | "cabin" | "deck";
 
 export default function VoyagePage() {
   const router = useRouter();
-  const { recordComplete, recordFail, data } = useLocalStorage();
+  const { recordComplete, recordFail, data, setTimeMode } = useLocalStorage();
   const { play, stopVoyageSounds, playVoyageSounds, playShipHorn } = useSound();
   const soundsStarted = useRef(false);
 
@@ -80,17 +81,41 @@ export default function VoyagePage() {
   const [showComplete, setShowComplete] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [manualTimeOfDay, setManualTimeOfDay] = useState<TimeOfDay | null>(null);
+  const [showTimeModeMenu, setShowTimeModeMenu] = useState(false);
   const vibrationEnabled = data.settings?.vibrationEnabled ?? true;
+  const timeMode: TimeMode = data.settings?.timeMode ?? "voyage";
 
-  // Auto time of day based on progress (0-40% day, 40-70% sunset, 70-100% night)
+  // Get current hour for realtime mode
+  const currentHour = new Date().getHours();
+
+  // Auto time of day based on selected mode
   const autoTimeOfDay = useMemo((): TimeOfDay => {
-    if (progress < 40) return "day";
-    if (progress < 70) return "sunset";
-    return "night";
-  }, [progress]);
+    if (timeMode === "voyage") {
+      // 항해 진행률 기반 (0-40% day, 40-70% sunset, 70-100% night)
+      if (progress < 40) return "day";
+      if (progress < 70) return "sunset";
+      return "night";
+    } else if (timeMode === "realtime") {
+      // 실제 시간 기반 (6-17시 낮, 17-20시 저녁, 20-6시 밤)
+      if (currentHour >= 6 && currentHour < 17) return "day";
+      if (currentHour >= 17 && currentHour < 20) return "sunset";
+      return "night";
+    }
+    // manual 모드: 기본값 day (수동 선택 시 manualTimeOfDay 사용)
+    return "day";
+  }, [progress, timeMode, currentHour]);
 
   // Current time of day (manual override or auto)
   const timeOfDay = manualTimeOfDay ?? autoTimeOfDay;
+
+  // 모드별 설명 텍스트
+  const timeModeDescription = useMemo(() => {
+    switch (timeMode) {
+      case "voyage": return "항해 진행에 따라 시간이 흐릅니다";
+      case "realtime": return "실제 시간에 맞춰 변경됩니다";
+      case "manual": return "직접 선택한 시간대가 유지됩니다";
+    }
+  }, [timeMode]);
 
   // Start voyage sounds on mount
   useEffect(() => {
@@ -335,46 +360,85 @@ export default function VoyagePage() {
 
         {/* Time of day toggle (only for cabin/deck views) */}
         {(viewMode === "cabin" || viewMode === "deck") && (
-          <div className="flex gap-2 mb-3">
-            <button
-              onClick={() => setManualTimeOfDay(manualTimeOfDay === "day" ? null : "day")}
-              className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
-                ${timeOfDay === "day"
-                  ? "bg-sky-500/30 text-sky-200 border border-sky-400/50"
-                  : "bg-white/5 text-white/40 hover:bg-white/10"
-                }`}
-            >
-              ☀️ 낮
-              {manualTimeOfDay === null && autoTimeOfDay === "day" && (
-                <span className="text-[10px] opacity-60">(자동)</span>
-              )}
-            </button>
-            <button
-              onClick={() => setManualTimeOfDay(manualTimeOfDay === "sunset" ? null : "sunset")}
-              className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
-                ${timeOfDay === "sunset"
-                  ? "bg-orange-500/30 text-orange-200 border border-orange-400/50"
-                  : "bg-white/5 text-white/40 hover:bg-white/10"
-                }`}
-            >
-              🌅 저녁
-              {manualTimeOfDay === null && autoTimeOfDay === "sunset" && (
-                <span className="text-[10px] opacity-60">(자동)</span>
-              )}
-            </button>
-            <button
-              onClick={() => setManualTimeOfDay(manualTimeOfDay === "night" ? null : "night")}
-              className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
-                ${timeOfDay === "night"
-                  ? "bg-indigo-500/30 text-indigo-200 border border-indigo-400/50"
-                  : "bg-white/5 text-white/40 hover:bg-white/10"
-                }`}
-            >
-              🌙 밤
-              {manualTimeOfDay === null && autoTimeOfDay === "night" && (
-                <span className="text-[10px] opacity-60">(자동)</span>
-              )}
-            </button>
+          <div className="mb-3">
+            {/* 모드 설명 + 설정 버튼 */}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-white/50">{timeModeDescription}</p>
+              <div className="relative">
+                <button
+                  onClick={() => setShowTimeModeMenu(!showTimeModeMenu)}
+                  className="p-1.5 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 transition-all text-xs"
+                >
+                  ⚙️
+                </button>
+                {/* 모드 선택 메뉴 */}
+                {showTimeModeMenu && (
+                  <div className="absolute right-0 bottom-full mb-1 w-40 bg-slate-800 rounded-lg shadow-lg border border-white/10 overflow-hidden z-10">
+                    <button
+                      onClick={() => { setTimeMode("voyage"); setShowTimeModeMenu(false); setManualTimeOfDay(null); }}
+                      className={`w-full px-3 py-2 text-left text-xs transition-all ${timeMode === "voyage" ? "bg-cyan-500/30 text-cyan-300" : "text-white/70 hover:bg-white/10"}`}
+                    >
+                      🚢 항해 시간
+                    </button>
+                    <button
+                      onClick={() => { setTimeMode("realtime"); setShowTimeModeMenu(false); setManualTimeOfDay(null); }}
+                      className={`w-full px-3 py-2 text-left text-xs transition-all ${timeMode === "realtime" ? "bg-cyan-500/30 text-cyan-300" : "text-white/70 hover:bg-white/10"}`}
+                    >
+                      🕐 실제 시간
+                    </button>
+                    <button
+                      onClick={() => { setTimeMode("manual"); setShowTimeModeMenu(false); }}
+                      className={`w-full px-3 py-2 text-left text-xs transition-all ${timeMode === "manual" ? "bg-cyan-500/30 text-cyan-300" : "text-white/70 hover:bg-white/10"}`}
+                    >
+                      ✋ 수동
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 시간대 버튼 */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setManualTimeOfDay(manualTimeOfDay === "day" ? null : "day")}
+                className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
+                  ${timeOfDay === "day"
+                    ? "bg-sky-500/30 text-sky-200 border border-sky-400/50"
+                    : "bg-white/5 text-white/40 hover:bg-white/10"
+                  }`}
+              >
+                ☀️ 낮
+                {timeMode !== "manual" && manualTimeOfDay === null && autoTimeOfDay === "day" && (
+                  <span className="text-[10px] opacity-60">(자동)</span>
+                )}
+              </button>
+              <button
+                onClick={() => setManualTimeOfDay(manualTimeOfDay === "sunset" ? null : "sunset")}
+                className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
+                  ${timeOfDay === "sunset"
+                    ? "bg-orange-500/30 text-orange-200 border border-orange-400/50"
+                    : "bg-white/5 text-white/40 hover:bg-white/10"
+                  }`}
+              >
+                🌅 저녁
+                {timeMode !== "manual" && manualTimeOfDay === null && autoTimeOfDay === "sunset" && (
+                  <span className="text-[10px] opacity-60">(자동)</span>
+                )}
+              </button>
+              <button
+                onClick={() => setManualTimeOfDay(manualTimeOfDay === "night" ? null : "night")}
+                className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
+                  ${timeOfDay === "night"
+                    ? "bg-indigo-500/30 text-indigo-200 border border-indigo-400/50"
+                    : "bg-white/5 text-white/40 hover:bg-white/10"
+                  }`}
+              >
+                🌙 밤
+                {timeMode !== "manual" && manualTimeOfDay === null && autoTimeOfDay === "night" && (
+                  <span className="text-[10px] opacity-60">(자동)</span>
+                )}
+              </button>
+            </div>
           </div>
         )}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ClimbFocusData, VoyageTicket, DailyFocusRecord } from "@/types";
+import { ClimbFocusData, VoyageTicket, DailyFocusRecord, TimeMode } from "@/types";
 import { DEFAULT_DATA } from "@/lib/constants";
 import { getNewlyUnlockedAchievements } from "@/lib/achievements";
 import { getNewlyUnlockedPorts } from "@/lib/portUnlocks";
@@ -22,6 +22,7 @@ import {
   toggleVibration as storageToggleVibration,
   toggleNotifications as storageToggleNotifications,
   setGoals as storageSetGoals,
+  setTimeMode as storageSetTimeMode,
 } from "@/lib/storage";
 
 export function useLocalStorage() {
@@ -131,6 +132,12 @@ export function useLocalStorage() {
     setData(updated);
   }, []);
 
+  // 시간대 모드 설정
+  const setTimeMode = useCallback((mode: TimeMode) => {
+    const updated = storageSetTimeMode(mode);
+    setData(updated);
+  }, []);
+
   // 새로 달성한 업적 확인
   const checkNewAchievements = useCallback(() => {
     return getNewlyUnlockedAchievements(data);
@@ -164,5 +171,6 @@ export function useLocalStorage() {
     checkNewAchievements,
     checkNewPortUnlocks,
     setGoals,
+    setTimeMode,
   };
 }

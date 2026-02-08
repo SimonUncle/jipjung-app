@@ -20,4 +20,5 @@ export {
   toggleVibration,
   toggleNotifications,
   setGoals,
+  setTimeMode,
 } from "./settingsUpdaters";

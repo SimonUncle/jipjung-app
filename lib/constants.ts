@@ -69,6 +69,7 @@ export function getDefaultData() {
       soundEnabled: true,
       vibrationEnabled: true,
       notificationsEnabled: false,
+      timeMode: "voyage" as const,
     },
     goals: {
       dailyMinutes: 60,
@@ -109,6 +110,7 @@ export const DEFAULT_DATA = {
     soundEnabled: true,
     vibrationEnabled: true,
     notificationsEnabled: false,
+    timeMode: "voyage" as const,
   },
   goals: {
     dailyMinutes: 60,

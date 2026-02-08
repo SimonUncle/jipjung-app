@@ -1,6 +1,6 @@
 // 설정 관련 업데이터
 
-import { ClimbFocusData } from "@/types";
+import { ClimbFocusData, TimeMode } from "@/types";
 import { getData, saveData } from "./core";
 
 /**
@@ -61,6 +61,23 @@ export function setGoals(dailyMinutes: number, weeklyMinutes: number): ClimbFocu
     goals: {
       dailyMinutes,
       weeklyMinutes,
+    },
+    lastActivity: new Date().toISOString(),
+  };
+  saveData(updated);
+  return updated;
+}
+
+/**
+ * 시간대 모드 설정
+ */
+export function setTimeMode(mode: TimeMode): ClimbFocusData {
+  const prev = getData();
+  const updated: ClimbFocusData = {
+    ...prev,
+    settings: {
+      ...prev.settings,
+      timeMode: mode,
     },
     lastActivity: new Date().toISOString(),
   };

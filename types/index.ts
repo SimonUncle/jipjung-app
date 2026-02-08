@@ -14,6 +14,10 @@ export type TimerDuration = (typeof TIMER_DURATIONS)[number];
 export const CABIN_TYPES = ["standard"] as const;
 export type CabinType = (typeof CABIN_TYPES)[number];
 
+// 시간대 모드
+export const TIME_MODES = ["voyage", "realtime", "manual"] as const;
+export type TimeMode = (typeof TIME_MODES)[number];
+
 // 체크포인트 정보
 export interface Checkpoint {
   percent: number; // 진행률 (0-100)
@@ -98,6 +102,7 @@ export interface ClimbFocusData {
     soundEnabled: boolean;
     vibrationEnabled: boolean;
     notificationsEnabled: boolean;
+    timeMode: TimeMode;
   };
   // 일일/주간 목표
   goals: {

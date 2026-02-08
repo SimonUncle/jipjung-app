@@ -19,6 +19,7 @@ function migrateData(data: ClimbFocusData): ClimbFocusData {
       soundEnabled: data.settings?.soundEnabled ?? true,
       vibrationEnabled: data.settings?.vibrationEnabled ?? true,
       notificationsEnabled: data.settings?.notificationsEnabled ?? false,
+      timeMode: (data.settings as { timeMode?: "voyage" | "realtime" | "manual" })?.timeMode ?? "voyage",
     },
     voyageHistory: data.voyageHistory || [],
     weeklyFocus: data.weeklyFocus || [],
