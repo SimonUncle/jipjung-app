@@ -187,10 +187,10 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
         />
       </div>
 
-      {/* Porthole - centered */}
+      {/* Porthole - centered, smaller to not get cut off */}
       <div
         className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-10"
-        style={{ width: "50%", aspectRatio: "1" }}
+        style={{ width: "min(50%, 45vh)", height: "min(50%, 45vh)" }}
       >
         {/* Outer brass ring */}
         <div
