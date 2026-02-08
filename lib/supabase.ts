@@ -1,4 +1,5 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -8,7 +9,7 @@ export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
 // Supabase 클라이언트 (설정이 없으면 더미 클라이언트)
 export const supabase: SupabaseClient = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createBrowserClient(supabaseUrl, supabaseAnonKey)
   : (null as unknown as SupabaseClient); // 타입 에러 방지용
 
 // 타입 정의
