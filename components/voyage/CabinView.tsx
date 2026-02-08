@@ -25,10 +25,36 @@ interface Seagull {
   direction: number;
 }
 
+interface Fish {
+  id: number;
+  x: number;
+  y: number;
+  speed: number;
+  direction: number;
+  type: "fish" | "school";
+}
+
+interface Dolphin {
+  id: number;
+  x: number;
+  phase: number; // 0: entering, 1: jumping, 2: exiting
+  direction: number;
+}
+
+interface DistantBoat {
+  id: number;
+  x: number;
+  speed: number;
+  direction: number;
+}
+
 export function CabinView({ progress, timeOfDay }: CabinViewProps) {
   const [time, setTime] = useState(0);
   const [waterDrops, setWaterDrops] = useState<WaterDrop[]>([]);
   const [seagulls, setSeagulls] = useState<Seagull[]>([]);
+  const [fish, setFish] = useState<Fish[]>([]);
+  const [dolphins, setDolphins] = useState<Dolphin[]>([]);
+  const [distantBoats, setDistantBoats] = useState<DistantBoat[]>([]);
 
   // Animation timer
   useEffect(() => {
@@ -82,6 +108,71 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
     setTimeout(createSeagull, 2000);
     return () => clearInterval(interval);
   }, [timeOfDay]);
+
+  // Fish swimming in ocean
+  useEffect(() => {
+    const createFish = () => {
+      const fromRight = Math.random() > 0.5;
+      const newFish: Fish = {
+        id: Date.now() + Math.random(),
+        x: fromRight ? 110 : -10,
+        y: 60 + Math.random() * 30,
+        speed: 0.15 + Math.random() * 0.1,
+        direction: fromRight ? -1 : 1,
+        type: Math.random() > 0.7 ? "school" : "fish",
+      };
+      setFish((prev) => [...prev.slice(-3), newFish]);
+    };
+
+    const interval = setInterval(() => {
+      if (Math.random() > 0.4) createFish();
+    }, 5000 + Math.random() * 5000);
+
+    setTimeout(createFish, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Dolphins (rare)
+  useEffect(() => {
+    const createDolphin = () => {
+      const fromRight = Math.random() > 0.5;
+      const newDolphin: Dolphin = {
+        id: Date.now() + Math.random(),
+        x: fromRight ? 110 : -10,
+        phase: 0,
+        direction: fromRight ? -1 : 1,
+      };
+      setDolphins((prev) => [...prev.slice(-1), newDolphin]);
+    };
+
+    const interval = setInterval(() => {
+      if (Math.random() > 0.7) createDolphin();
+    }, 15000 + Math.random() * 10000);
+
+    setTimeout(createDolphin, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Distant boats
+  useEffect(() => {
+    const createBoat = () => {
+      const fromRight = Math.random() > 0.5;
+      const newBoat: DistantBoat = {
+        id: Date.now() + Math.random(),
+        x: fromRight ? 105 : -5,
+        speed: 0.03 + Math.random() * 0.02,
+        direction: fromRight ? -1 : 1,
+      };
+      setDistantBoats((prev) => [...prev.slice(-1), newBoat]);
+    };
+
+    const interval = setInterval(() => {
+      if (Math.random() > 0.6) createBoat();
+    }, 20000 + Math.random() * 15000);
+
+    setTimeout(createBoat, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Ocean bobbing effect
   const oceanBob = useMemo(() => {
@@ -171,7 +262,7 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
       </div>
 
       {/* Wall lamp (left side) */}
-      <div className="absolute left-3 top-1/4 z-20">
+      <div className="absolute left-3 top-[20%] z-20">
         <div className="w-2 h-3 bg-amber-800 rounded-t-sm mx-auto" />
         <div
           className="w-5 h-7 rounded-b-full"
@@ -196,7 +287,7 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
       </div>
 
       {/* Wall lamp (right side) */}
-      <div className="absolute right-3 top-1/4 z-20">
+      <div className="absolute right-3 top-[20%] z-20">
         <div className="w-2 h-3 bg-amber-800 rounded-t-sm mx-auto" />
         <div
           className="w-5 h-7 rounded-b-full"
@@ -219,9 +310,9 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
         )}
       </div>
 
-      {/* Porthole container - centered */}
-      <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: "15%" }}>
-        <div className="relative w-[55%] aspect-square">
+      {/* Porthole container - centered, smaller */}
+      <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: "10%" }}>
+        <div className="relative w-[45%] aspect-square">
           {/* Outer brass ring */}
           <div
             className="absolute inset-0 rounded-full"
@@ -252,7 +343,7 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
           {boltPositions.map((pos, i) => (
             <div
               key={i}
-              className="absolute w-3 h-3 rounded-full z-10"
+              className="absolute w-2.5 h-2.5 rounded-full z-10"
               style={{
                 left: `${pos.x}%`,
                 top: `${pos.y}%`,
@@ -267,7 +358,7 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
             >
               {/* Bolt slot */}
               <div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-0.5 rounded-sm"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-0.5 rounded-sm"
                 style={{ background: "rgba(0,0,0,0.4)" }}
               />
             </div>
@@ -302,22 +393,22 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
               style={{
                 top: timeOfDay === "night" ? "15%" : "20%",
                 right: "25%",
-                width: timeOfDay === "night" ? "22px" : "28px",
-                height: timeOfDay === "night" ? "22px" : "28px",
+                width: timeOfDay === "night" ? "18px" : "22px",
+                height: timeOfDay === "night" ? "18px" : "22px",
                 borderRadius: "50%",
                 background: `radial-gradient(circle, ${colors.sun.color} 0%, ${colors.sun.color} 50%, transparent 70%)`,
-                filter: `blur(1px) drop-shadow(0 0 15px ${colors.sun.glow})`,
+                filter: `blur(1px) drop-shadow(0 0 12px ${colors.sun.glow})`,
               }}
             />
 
             {/* Stars (night only) */}
-            {timeOfDay === "night" && [...Array(10)].map((_, i) => (
+            {timeOfDay === "night" && [...Array(8)].map((_, i) => (
               <div
                 key={i}
                 className="absolute w-0.5 h-0.5 bg-white rounded-full"
                 style={{
-                  top: `${8 + (i % 5) * 8}%`,
-                  left: `${10 + (i * 17) % 80}%`,
+                  top: `${8 + (i % 4) * 10}%`,
+                  left: `${10 + (i * 20) % 80}%`,
                   opacity: 0.3 + Math.sin(time * 2 + i) * 0.4,
                 }}
               />
@@ -331,8 +422,8 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
                 style={{
                   top: `${12 + i * 15}%`,
                   left: `${((time * (0.3 + i * 0.1) * 12) % 140) - 20}%`,
-                  width: `${35 + i * 10}px`,
-                  height: `${18 + i * 5}px`,
+                  width: `${28 + i * 8}px`,
+                  height: `${14 + i * 4}px`,
                   opacity: 0.5 - i * 0.15,
                 }}
                 viewBox="0 0 64 32"
@@ -342,6 +433,26 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
                 <ellipse cx="44" cy="16" rx="14" ry="10" fill={colors.accent} />
               </svg>
             ))}
+
+            {/* Distant boat */}
+            {distantBoats.map((boat) => {
+              const currentX = boat.x + time * boat.speed * 20 * boat.direction;
+              if (currentX < -5 || currentX > 105) return null;
+              return (
+                <div
+                  key={boat.id}
+                  className="absolute text-[8px]"
+                  style={{
+                    top: "48%",
+                    left: `${currentX}%`,
+                    transform: `translateY(${Math.sin(time * 1.5) * 1}px) scaleX(${boat.direction})`,
+                    opacity: 0.6,
+                  }}
+                >
+                  ⛵
+                </div>
+              );
+            })}
 
             {/* Horizon */}
             <div
@@ -368,7 +479,7 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
                 return (
                   <svg
                     key={i}
-                    className="absolute left-0 w-[200%] h-6"
+                    className="absolute left-0 w-[200%] h-5"
                     style={{
                       top: `${10 + i * 25}%`,
                       opacity: 0.35 - i * 0.08,
@@ -385,6 +496,48 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
                 );
               })}
 
+              {/* Fish swimming */}
+              {fish.map((f) => {
+                const currentX = f.x + time * f.speed * 20 * f.direction;
+                if (currentX < -10 || currentX > 110) return null;
+                return (
+                  <div
+                    key={f.id}
+                    className="absolute"
+                    style={{
+                      top: `${f.y}%`,
+                      left: `${currentX}%`,
+                      fontSize: f.type === "school" ? "10px" : "8px",
+                      transform: `translateY(${Math.sin(time * 3 + f.id) * 3}px) scaleX(${f.direction})`,
+                      opacity: 0.7,
+                    }}
+                  >
+                    {f.type === "school" ? "🐟🐟🐟" : "🐟"}
+                  </div>
+                );
+              })}
+
+              {/* Dolphins jumping */}
+              {dolphins.map((dolphin) => {
+                const currentX = dolphin.x + time * 0.5 * 20 * dolphin.direction;
+                if (currentX < -15 || currentX > 115) return null;
+                const jumpY = Math.sin(((currentX - dolphin.x) / 30) * Math.PI) * 25;
+                return (
+                  <div
+                    key={dolphin.id}
+                    className="absolute text-sm"
+                    style={{
+                      top: `${30 - jumpY}%`,
+                      left: `${currentX}%`,
+                      transform: `scaleX(${dolphin.direction}) rotate(${jumpY > 10 ? -30 : jumpY > 0 ? 0 : 30}deg)`,
+                      opacity: 0.85,
+                    }}
+                  >
+                    🐬
+                  </div>
+                );
+              })}
+
               {/* Moon reflection (night) */}
               {timeOfDay === "night" && (
                 <div
@@ -392,10 +545,10 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
                   style={{
                     top: "8%",
                     right: "22%",
-                    width: "20px",
-                    height: "40px",
+                    width: "16px",
+                    height: "30px",
                     background: "linear-gradient(to bottom, rgba(200,200,255,0.25), transparent)",
-                    filter: "blur(6px)",
+                    filter: "blur(5px)",
                     transform: `scaleX(${0.8 + Math.sin(time * 2) * 0.2})`,
                   }}
                 />
@@ -422,7 +575,7 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
               return (
                 <div
                   key={seagull.id}
-                  className="absolute text-xs"
+                  className="absolute text-[10px]"
                   style={{
                     top: `${seagull.y}%`,
                     left: `${currentX}%`,
@@ -462,47 +615,31 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
         </div>
       </div>
 
-      {/* Bed area (bottom 28%) */}
-      <div className="absolute bottom-0 left-0 right-0 h-[28%] z-10">
-        {/* Bed frame shadow */}
-        <div
-          className="absolute inset-x-2 top-0 bottom-0"
-          style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.3), transparent 10%)",
-          }}
-        />
-
+      {/* Bed area (bottom 15%) - just pillows visible */}
+      <div className="absolute bottom-0 left-0 right-0 h-[15%] z-10">
         {/* Bed cover */}
         <div
-          className="absolute inset-x-3 top-3 bottom-0 rounded-t-xl"
+          className="absolute inset-x-3 top-2 bottom-0 rounded-t-lg"
           style={{
-            background: "linear-gradient(to bottom, #2a4a6a 0%, #1e3a52 60%, #15304a 100%)",
-            boxShadow: "inset 0 3px 12px rgba(0,0,0,0.35)",
-          }}
-        />
-
-        {/* Blanket fold */}
-        <div
-          className="absolute left-3 right-3 top-3 h-4 rounded-t-xl"
-          style={{
-            background: "linear-gradient(to bottom, #3a5a7a 0%, #2a4a6a 100%)",
+            background: "linear-gradient(to bottom, #2a4a6a 0%, #1e3a52 100%)",
+            boxShadow: "inset 0 3px 10px rgba(0,0,0,0.35)",
           }}
         />
 
         {/* Pillows (2) */}
-        <div className="absolute left-6 top-1 flex gap-2">
+        <div className="absolute left-5 top-0 flex gap-1.5">
           <div
-            className="w-14 h-8 rounded-lg"
+            className="w-12 h-6 rounded-md"
             style={{
               background: "linear-gradient(to bottom, #f8f8f5 0%, #e8e8e2 50%, #dcdcd5 100%)",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.5)",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.5)",
             }}
           />
           <div
-            className="w-14 h-8 rounded-lg"
+            className="w-12 h-6 rounded-md"
             style={{
               background: "linear-gradient(to bottom, #f8f8f5 0%, #e8e8e2 50%, #dcdcd5 100%)",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.5)",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.5)",
             }}
           />
         </div>
@@ -512,7 +649,7 @@ export function CabinView({ progress, timeOfDay }: CabinViewProps) {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(ellipse at center 35%, ${colors.ambient} 0%, transparent 60%)`,
+          background: `radial-gradient(ellipse at center 40%, ${colors.ambient} 0%, transparent 60%)`,
         }}
       />
 

@@ -26,10 +26,38 @@ interface Splash {
   delay: number;
 }
 
+// 물고기 타입
+interface Fish {
+  id: number;
+  x: number;
+  y: number;
+  speed: number;
+  direction: number;
+  type: "fish" | "school";
+}
+
+// 돌고래 타입
+interface Dolphin {
+  id: number;
+  x: number;
+  direction: number;
+}
+
+// 먼 배 타입
+interface DistantBoat {
+  id: number;
+  x: number;
+  speed: number;
+  direction: number;
+}
+
 export function DeckView({ progress, timeOfDay }: DeckViewProps) {
   const [time, setTime] = useState(0);
   const [seagulls, setSeagulls] = useState<Seagull[]>([]);
   const [splashes, setSplashes] = useState<Splash[]>([]);
+  const [fish, setFish] = useState<Fish[]>([]);
+  const [dolphins, setDolphins] = useState<Dolphin[]>([]);
+  const [distantBoats, setDistantBoats] = useState<DistantBoat[]>([]);
 
   // 애니메이션 타이머
   useEffect(() => {
@@ -79,6 +107,70 @@ export function DeckView({ progress, timeOfDay }: DeckViewProps) {
       if (Math.random() > 0.3) createSplash();
     }, 2000 + Math.random() * 2000);
 
+    return () => clearInterval(interval);
+  }, []);
+
+  // 물고기 생성
+  useEffect(() => {
+    const createFish = () => {
+      const fromRight = Math.random() > 0.5;
+      const newFish: Fish = {
+        id: Date.now() + Math.random(),
+        x: fromRight ? 110 : -10,
+        y: 25 + Math.random() * 50,
+        speed: 0.2 + Math.random() * 0.15,
+        direction: fromRight ? -1 : 1,
+        type: Math.random() > 0.7 ? "school" : "fish",
+      };
+      setFish((prev) => [...prev.slice(-4), newFish]);
+    };
+
+    const interval = setInterval(() => {
+      if (Math.random() > 0.4) createFish();
+    }, 4000 + Math.random() * 4000);
+
+    setTimeout(createFish, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 돌고래 생성 (드물게)
+  useEffect(() => {
+    const createDolphin = () => {
+      const fromRight = Math.random() > 0.5;
+      const newDolphin: Dolphin = {
+        id: Date.now() + Math.random(),
+        x: fromRight ? 110 : -10,
+        direction: fromRight ? -1 : 1,
+      };
+      setDolphins((prev) => [...prev.slice(-1), newDolphin]);
+    };
+
+    const interval = setInterval(() => {
+      if (Math.random() > 0.7) createDolphin();
+    }, 12000 + Math.random() * 8000);
+
+    setTimeout(createDolphin, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 먼 배 생성
+  useEffect(() => {
+    const createBoat = () => {
+      const fromRight = Math.random() > 0.5;
+      const newBoat: DistantBoat = {
+        id: Date.now() + Math.random(),
+        x: fromRight ? 105 : -5,
+        speed: 0.04 + Math.random() * 0.03,
+        direction: fromRight ? -1 : 1,
+      };
+      setDistantBoats((prev) => [...prev.slice(-1), newBoat]);
+    };
+
+    const interval = setInterval(() => {
+      if (Math.random() > 0.6) createBoat();
+    }, 18000 + Math.random() * 12000);
+
+    setTimeout(createBoat, 4000);
     return () => clearInterval(interval);
   }, []);
 
@@ -237,6 +329,26 @@ export function DeckView({ progress, timeOfDay }: DeckViewProps) {
           })}
         </div>
 
+        {/* 먼 배 (수평선 근처) */}
+        {distantBoats.map((boat) => {
+          const currentX = boat.x + time * boat.speed * 25 * boat.direction;
+          if (currentX < -5 || currentX > 105) return null;
+          return (
+            <div
+              key={boat.id}
+              className="absolute text-sm z-10"
+              style={{
+                top: `${43 + horizonOffset}%`,
+                left: `${currentX}%`,
+                transform: `translateY(${Math.sin(time * 1.5) * 2}px) scaleX(${boat.direction})`,
+                opacity: 0.7,
+              }}
+            >
+              ⛵
+            </div>
+          );
+        })}
+
         {/* 수평선 */}
         <div
           className="absolute left-0 right-0 transition-all duration-300"
@@ -319,6 +431,49 @@ export function DeckView({ progress, timeOfDay }: DeckViewProps) {
                 }}
               >
                 💨
+              </div>
+            );
+          })}
+
+          {/* 물고기 */}
+          {fish.map((f) => {
+            const currentX = f.x + time * f.speed * 25 * f.direction;
+            if (currentX < -10 || currentX > 110) return null;
+            return (
+              <div
+                key={f.id}
+                className="absolute"
+                style={{
+                  top: `${f.y}%`,
+                  left: `${currentX}%`,
+                  fontSize: f.type === "school" ? "16px" : "14px",
+                  transform: `translateY(${Math.sin(time * 3 + f.id) * 4}px) scaleX(${f.direction})`,
+                  opacity: 0.8,
+                }}
+              >
+                {f.type === "school" ? "🐟🐟🐟" : "🐟"}
+              </div>
+            );
+          })}
+
+          {/* 돌고래 점프 */}
+          {dolphins.map((dolphin) => {
+            const currentX = dolphin.x + time * 0.6 * 25 * dolphin.direction;
+            if (currentX < -15 || currentX > 115) return null;
+            const jumpProgress = ((currentX - dolphin.x) * dolphin.direction) / 40;
+            const jumpY = Math.sin(jumpProgress * Math.PI) * 35;
+            return (
+              <div
+                key={dolphin.id}
+                className="absolute text-xl"
+                style={{
+                  top: `${20 - jumpY}%`,
+                  left: `${currentX}%`,
+                  transform: `scaleX(${dolphin.direction}) rotate(${jumpY > 15 ? -35 : jumpY > 5 ? 0 : 35}deg)`,
+                  opacity: 0.9,
+                }}
+              >
+                🐬
               </div>
             );
           })}
