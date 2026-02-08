@@ -61,12 +61,12 @@ export function CabinGrid({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="cabin-grid-title"
     >
-      <div ref={containerRef} className="w-full max-w-sm animate-in zoom-in-95 duration-300">
+      <div ref={containerRef} className="w-full max-w-sm animate-in zoom-in-95 duration-300 my-auto">
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
           {/* Header */}
           <div className="px-5 pt-5 pb-3">
