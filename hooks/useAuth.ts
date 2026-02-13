@@ -59,8 +59,8 @@ export function useAuth() {
         isConfigured: true,
       });
 
-      // 로그인 시 localStorage 데이터를 Supabase에 동기화
-      if (_event === "SIGNED_IN" && session?.user?.id) {
+      // 로그인 또는 세션 복원 시 localStorage 데이터를 Supabase에 동기화
+      if ((_event === "SIGNED_IN" || _event === "INITIAL_SESSION") && session?.user?.id) {
         try {
           const raw = localStorage.getItem("climb-focus-data");
           if (raw) {

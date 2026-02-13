@@ -660,8 +660,8 @@ export function playSurfacingSound() {
 
   const oscGain = ctx.createGain();
   oscGain.gain.setValueAtTime(0, now);
-  oscGain.gain.linearRampToValueAtTime(0.06, now + 0.2);
-  oscGain.gain.setValueAtTime(0.06, now + 1.2);
+  oscGain.gain.linearRampToValueAtTime(0.02, now + 0.2);
+  oscGain.gain.setValueAtTime(0.02, now + 1.2);
   oscGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
 
   const lowpass = ctx.createBiquadFilter();
@@ -689,7 +689,7 @@ export function playSurfacingSound() {
 
     const bGain = ctx.createGain();
     bGain.gain.setValueAtTime(0, t);
-    bGain.gain.linearRampToValueAtTime(0.03, t + 0.05);
+    bGain.gain.linearRampToValueAtTime(0.012, t + 0.05);
     bGain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
 
     bubbleSrc.connect(bp);
@@ -710,7 +710,7 @@ export function playSurfacingSound() {
 
   const hissGain = ctx.createGain();
   hissGain.gain.setValueAtTime(0, now + 0.8);
-  hissGain.gain.linearRampToValueAtTime(0.04, now + 1.0);
+  hissGain.gain.linearRampToValueAtTime(0.015, now + 1.0);
   hissGain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
 
   hissSrc.connect(hissHp);
@@ -734,8 +734,8 @@ export function playDivingSound() {
 
   const oscGain = ctx.createGain();
   oscGain.gain.setValueAtTime(0, now);
-  oscGain.gain.linearRampToValueAtTime(0.07, now + 0.15);
-  oscGain.gain.setValueAtTime(0.07, now + 1.0);
+  oscGain.gain.linearRampToValueAtTime(0.025, now + 0.15);
+  oscGain.gain.setValueAtTime(0.025, now + 1.0);
   oscGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
 
   const lp = ctx.createBiquadFilter();
@@ -761,8 +761,8 @@ export function playDivingSound() {
 
   const pressureGain = ctx.createGain();
   pressureGain.gain.setValueAtTime(0, now);
-  pressureGain.gain.linearRampToValueAtTime(0.05, now + 0.3);
-  pressureGain.gain.setValueAtTime(0.05, now + 1.0);
+  pressureGain.gain.linearRampToValueAtTime(0.02, now + 0.3);
+  pressureGain.gain.setValueAtTime(0.02, now + 1.0);
   pressureGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
 
   pressureSrc.connect(pressureLp);
