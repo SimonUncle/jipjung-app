@@ -3,9 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getData } from "@/lib/storage";
-
-// 초기 해금 항구
-const INITIAL_UNLOCKED_PORTS = ["busan", "osaka", "tokyo"];
+import { INITIAL_UNLOCKED_PORTS } from "@/lib/constants";
 const INITIAL_VISITED_PORTS = ["busan"];
 
 interface UnlockState {

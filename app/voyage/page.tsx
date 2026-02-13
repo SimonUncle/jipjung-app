@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useCallback, useState, useRef, useMemo } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { CabinView, TimeOfDay } from "@/components/voyage/CabinView";
-import { TimeMode } from "@/types";
-import { DeckView } from "@/components/voyage/DeckView";
+import { PeriscopeView } from "@/components/submarine/PeriscopeView";
+import { UnderwaterView } from "@/components/submarine/UnderwaterView";
+import { SubmarineIcon } from "@/components/submarine/SubmarineIcon";
+import { useSubmarineEvents } from "@/hooks/useSubmarineEvents";
 
-// Dynamic imports for map components to avoid SSR issues
-const LeafletMap = dynamic(
-  () => import("@/components/voyage/LeafletMap").then((mod) => mod.LeafletMap),
-  { ssr: false, loading: () => <MapLoading /> }
-);
-
-const ChaseMapView = dynamic(
-  () => import("@/components/voyage/ChaseMapView").then((mod) => mod.ChaseMapView),
+// Dynamic import for map component (SSR 방지)
+const SubmarineMap = dynamic(
+  () => import("@/components/submarine/SubmarineMap"),
   { ssr: false, loading: () => <MapLoading /> }
 );
 
@@ -25,6 +21,7 @@ function MapLoading() {
     </div>
   );
 }
+
 import {
   useVoyageStore,
   getProgress,
@@ -38,14 +35,22 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useSound } from "@/hooks/useSound";
 import { vibrateSuccess, vibrateFail, vibratePause } from "@/lib/vibration";
 import { notifyVoyageComplete } from "@/lib/notifications";
-import { Ship, Anchor, ArrowRight, Map, Eye, Navigation } from "lucide-react";
+import { Anchor, ArrowRight, Map, Eye, Waves } from "lucide-react";
 
-type ViewMode = "map" | "chase" | "cabin" | "deck";
+type ViewMode = "map" | "periscope" | "underwater";
 
 export default function VoyagePage() {
   const router = useRouter();
-  const { recordComplete, recordFail, data, setTimeMode } = useLocalStorage();
-  const { play, stopVoyageSounds, playVoyageSounds, playShipHorn } = useSound();
+  const { recordComplete, recordFail, data } = useLocalStorage();
+  const {
+    play,
+    stopAll,
+    playUnderwaterSounds,
+    stopUnderwaterSounds,
+    playSurfaceSounds,
+    stopSurfaceSounds,
+    playDiveHorn,
+  } = useSound();
   const soundsStarted = useRef(false);
 
   const {
@@ -56,16 +61,11 @@ export default function VoyagePage() {
     cabinNumber,
     focusPurpose,
     customPurposeText,
-    mapZoom,
     isPaused,
     pauseUsed,
-    currentPosition,
-    positionHistory,
     seaRoute,
     tick,
     togglePause,
-    zoomIn,
-    zoomOut,
     completeVoyage,
     failVoyage,
   } = useVoyageStore();
@@ -80,73 +80,44 @@ export default function VoyagePage() {
 
   const [showComplete, setShowComplete] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("map");
-  const [manualTimeOfDay, setManualTimeOfDay] = useState<TimeOfDay | null>(null);
-  const [showTimeModeMenu, setShowTimeModeMenu] = useState(false);
   const vibrationEnabled = data.settings?.vibrationEnabled ?? true;
-  const timeMode: TimeMode = data.settings?.timeMode ?? "voyage";
 
-  // Get current hour for realtime mode
-  const currentHour = new Date().getHours();
+  // 잠수함 이벤트 엔진
+  const { phase, depth, speed, oxygen, battery, activeEvents } =
+    useSubmarineEvents(progress, isPaused, status);
 
-  // Auto time of day based on selected mode
-  const autoTimeOfDay = useMemo((): TimeOfDay => {
-    if (timeMode === "voyage") {
-      // 항해 진행률 기반 (0-40% day, 40-70% sunset, 70-100% night)
-      if (progress < 40) return "day";
-      if (progress < 70) return "sunset";
-      return "night";
-    } else if (timeMode === "realtime") {
-      // 실제 시간 기반 (6-17시 낮, 17-20시 저녁, 20-6시 밤)
-      if (currentHour >= 6 && currentHour < 17) return "day";
-      if (currentHour >= 17 && currentHour < 20) return "sunset";
-      return "night";
-    }
-    // manual 모드: 기본값 day (수동 선택 시 manualTimeOfDay 사용)
-    return "day";
-  }, [progress, timeMode, currentHour]);
+  // 이벤트 필터링
+  const mapEvents = activeEvents.filter(
+    (e) => e.event.scope === "map" || e.event.scope === "all"
+  );
+  const periscopeEvents = activeEvents.filter(
+    (e) => e.event.scope === "periscope" || e.event.scope === "all"
+  );
+  const underwaterEvents = activeEvents.filter(
+    (e) => e.event.scope === "underwater" || e.event.scope === "all"
+  );
 
-  // Current time of day (manual override or auto)
-  const timeOfDay = manualTimeOfDay ?? autoTimeOfDay;
-
-  // 모드별 설명 텍스트
-  const timeModeDescription = useMemo(() => {
-    switch (timeMode) {
-      case "voyage": return "항해 진행에 따라 시간이 흐릅니다";
-      case "realtime": return "실제 시간에 맞춰 변경됩니다";
-      case "manual": return "직접 선택한 시간대가 유지됩니다";
-    }
-  }, [timeMode]);
-
-  // Start voyage sounds on mount
+  // Start voyage sounds on mount (해저 소리)
+  // soundManager 내부에서 enabled 체크하므로 data.settings 의존 불필요
   useEffect(() => {
-    if (status === "sailing" && !soundsStarted.current && data.settings?.soundEnabled) {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    if (status === "sailing" && !soundsStarted.current) {
       soundsStarted.current = true;
-      // Play ship horn on departure
-      playShipHorn();
-      // Start ambient sounds after horn
-      setTimeout(() => {
-        playVoyageSounds();
+      playDiveHorn();
+      timer = setTimeout(() => {
+        playUnderwaterSounds();
       }, 1500);
     }
 
-    // Cleanup on unmount
     return () => {
+      if (timer) clearTimeout(timer);
       if (soundsStarted.current) {
-        stopVoyageSounds();
+        stopAll();
+        soundsStarted.current = false;
       }
     };
-  }, [status, playVoyageSounds, stopVoyageSounds, playShipHorn, data.settings?.soundEnabled]);
-
-  // Pause/resume sounds
-  useEffect(() => {
-    if (!soundsStarted.current) return;
-
-    if (isPaused) {
-      stopVoyageSounds();
-    } else if (status === "sailing") {
-      playVoyageSounds();
-    }
-  }, [isPaused, status, playVoyageSounds, stopVoyageSounds]);
+  }, [status, playUnderwaterSounds, stopAll, playDiveHorn]);
 
   // Timer tick
   useEffect(() => {
@@ -164,16 +135,14 @@ export default function VoyagePage() {
     if (status === "arriving" && !showComplete) {
       setShowComplete(true);
 
-      // Stop voyage sounds and play arrival horn
-      stopVoyageSounds();
-      playShipHorn();
+      stopAll();
+      playDiveHorn();
       play("complete");
 
       if (vibrationEnabled) vibrateSuccess();
       recordComplete(selectedDuration);
       completeVoyage(addVisitedPort);
 
-      // Send notification if tab is hidden
       if (typeof document !== "undefined" && document.hidden && arrivalPort) {
         notifyVoyageComplete(arrivalPort.nameKo);
       }
@@ -182,19 +151,19 @@ export default function VoyagePage() {
         router.push("/arrival");
       }, 2000);
     }
-  }, [status, showComplete, selectedDuration, recordComplete, completeVoyage, addVisitedPort, router, play, vibrationEnabled, stopVoyageSounds, playShipHorn, arrivalPort]);
+  }, [status, showComplete, selectedDuration, recordComplete, completeVoyage, addVisitedPort, router, play, vibrationEnabled, stopAll, playDiveHorn, arrivalPort]);
 
   // Tab visibility detection
   const handleVisibilityHidden = useCallback(() => {
     if (status === "sailing" && !isPaused) {
-      stopVoyageSounds();
+      stopAll();
       play("fail");
       if (vibrationEnabled) vibrateFail();
       recordFail();
       failVoyage();
       router.push("/fail");
     }
-  }, [status, isPaused, failVoyage, recordFail, router, stopVoyageSounds, play, vibrationEnabled]);
+  }, [status, isPaused, failVoyage, recordFail, router, stopAll, play, vibrationEnabled]);
 
   useVisibility({
     onHidden: handleVisibilityHidden,
@@ -208,9 +177,20 @@ export default function VoyagePage() {
     }
   }, [status, departurePort, arrivalPort, router]);
 
-  // Pause handler
+  // Pause handler — 사운드 전환을 클릭 핸들러 안에서 (유저 제스처 컨텍스트)
   const handlePause = () => {
     if (vibrationEnabled) vibratePause();
+
+    if (!isPaused) {
+      // 잠항 → 부상
+      stopUnderwaterSounds();
+      playSurfaceSounds();
+    } else {
+      // 부상 → 재잠항
+      stopSurfaceSounds();
+      playUnderwaterSounds();
+    }
+
     togglePause();
   };
 
@@ -273,44 +253,48 @@ export default function VoyagePage() {
       </header>
 
       {/* Main content - Full screen view */}
-      <div className="flex-1 p-4 min-h-0">
-        <div className="w-full h-full">
+      <div className="flex-1 p-4 min-h-0 relative">
+        <div className="w-full h-full rounded-xl overflow-hidden isolate">
           {viewMode === "map" ? (
-            <LeafletMap
-              departurePort={departurePort}
-              arrivalPort={arrivalPort}
+            <SubmarineMap
               progress={progress}
-              zoom={mapZoom}
               seaRoute={seaRoute}
-              onZoomIn={zoomIn}
-              onZoomOut={zoomOut}
+              activeEvents={mapEvents}
+              phase={phase}
             />
-          ) : viewMode === "chase" ? (
-            <ChaseMapView
-              departurePort={departurePort}
-              arrivalPort={arrivalPort}
-              currentPosition={currentPosition}
-              positionHistory={positionHistory}
-              seaRoute={seaRoute}
+          ) : viewMode === "periscope" ? (
+            <PeriscopeView
               progress={progress}
-            />
-          ) : viewMode === "cabin" ? (
-            <CabinView
-              progress={progress}
-              timeOfDay={timeOfDay}
+              phase={phase}
+              activeEvents={periscopeEvents}
             />
           ) : (
-            <DeckView
+            <UnderwaterView
               progress={progress}
-              timeOfDay={timeOfDay}
+              phase={phase}
+              depth={depth}
+              activeEvents={underwaterEvents}
             />
           )}
         </div>
+
+        {/* 부상하기 버튼 — overflow-hidden 밖, 맵 위에 오버레이 */}
+        {status === "sailing" && !showComplete && !isPaused && !pauseUsed && (
+          <div className="absolute top-7 left-1/2 -translate-x-1/2 z-50">
+            <button
+              onClick={handlePause}
+              className="px-5 py-3 min-h-[44px] bg-black/40 text-white/90 rounded-full text-sm border border-white/20 backdrop-blur-sm transition-all duration-200 hover:bg-black/60 flex items-center gap-2"
+            >
+              <Anchor className="w-4 h-4" />
+              부상하기 (1회)
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Bottom section - Tabs + Progress */}
       <div className="px-4 pb-4 shrink-0 safe-area-bottom">
-        {/* View toggle tabs */}
+        {/* View toggle tabs (3탭) */}
         <div className="flex gap-2 mb-3">
           <button
             onClick={() => setViewMode("map")}
@@ -324,123 +308,50 @@ export default function VoyagePage() {
             지도
           </button>
           <button
-            onClick={() => setViewMode("chase")}
+            onClick={() => setViewMode("periscope")}
             className={`flex-1 py-2.5 min-h-[44px] rounded-xl font-medium text-sm flex items-center justify-center gap-1.5 transition-all
-              ${viewMode === "chase"
-                ? "bg-cyan-500 text-white shadow-lg shadow-cyan-500/30"
-                : "bg-white/10 text-white/60 hover:bg-white/20"
-              }`}
-          >
-            <Navigation className="w-4 h-4" />
-            추적
-          </button>
-          <button
-            onClick={() => setViewMode("cabin")}
-            className={`flex-1 py-2.5 min-h-[44px] rounded-xl font-medium text-sm flex items-center justify-center gap-1.5 transition-all
-              ${viewMode === "cabin"
+              ${viewMode === "periscope"
                 ? "bg-cyan-500 text-white shadow-lg shadow-cyan-500/30"
                 : "bg-white/10 text-white/60 hover:bg-white/20"
               }`}
           >
             <Eye className="w-4 h-4" />
-            선실
+            잠망경
           </button>
           <button
-            onClick={() => setViewMode("deck")}
+            onClick={() => setViewMode("underwater")}
             className={`flex-1 py-2.5 min-h-[44px] rounded-xl font-medium text-sm flex items-center justify-center gap-1.5 transition-all
-              ${viewMode === "deck"
+              ${viewMode === "underwater"
                 ? "bg-cyan-500 text-white shadow-lg shadow-cyan-500/30"
                 : "bg-white/10 text-white/60 hover:bg-white/20"
               }`}
           >
-            <Ship className="w-4 h-4" />
-            갑판
+            <Waves className="w-4 h-4" />
+            해저
           </button>
         </div>
 
-        {/* Time of day toggle (only for cabin/deck views) */}
-        {(viewMode === "cabin" || viewMode === "deck") && (
-          <div className="mb-3">
-            {/* 모드 설명 + 설정 버튼 */}
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-white/50">{timeModeDescription}</p>
-              <div className="relative">
-                <button
-                  onClick={() => setShowTimeModeMenu(!showTimeModeMenu)}
-                  className="p-1.5 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 transition-all text-xs"
-                >
-                  ⚙️
-                </button>
-                {/* 모드 선택 메뉴 */}
-                {showTimeModeMenu && (
-                  <div className="absolute right-0 bottom-full mb-1 w-40 bg-slate-800 rounded-lg shadow-lg border border-white/10 overflow-hidden z-10">
-                    <button
-                      onClick={() => { setTimeMode("voyage"); setShowTimeModeMenu(false); setManualTimeOfDay(null); }}
-                      className={`w-full px-3 py-2 text-left text-xs transition-all ${timeMode === "voyage" ? "bg-cyan-500/30 text-cyan-300" : "text-white/70 hover:bg-white/10"}`}
-                    >
-                      🚢 항해 시간
-                    </button>
-                    <button
-                      onClick={() => { setTimeMode("realtime"); setShowTimeModeMenu(false); setManualTimeOfDay(null); }}
-                      className={`w-full px-3 py-2 text-left text-xs transition-all ${timeMode === "realtime" ? "bg-cyan-500/30 text-cyan-300" : "text-white/70 hover:bg-white/10"}`}
-                    >
-                      🕐 실제 시간
-                    </button>
-                    <button
-                      onClick={() => { setTimeMode("manual"); setShowTimeModeMenu(false); }}
-                      className={`w-full px-3 py-2 text-left text-xs transition-all ${timeMode === "manual" ? "bg-cyan-500/30 text-cyan-300" : "text-white/70 hover:bg-white/10"}`}
-                    >
-                      ✋ 수동
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 시간대 버튼 */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setManualTimeOfDay(manualTimeOfDay === "day" ? null : "day")}
-                className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
-                  ${timeOfDay === "day"
-                    ? "bg-sky-500/30 text-sky-200 border border-sky-400/50"
-                    : "bg-white/5 text-white/40 hover:bg-white/10"
-                  }`}
-              >
-                ☀️ 낮
-                {timeMode !== "manual" && manualTimeOfDay === null && autoTimeOfDay === "day" && (
-                  <span className="text-[10px] opacity-60">(자동)</span>
-                )}
-              </button>
-              <button
-                onClick={() => setManualTimeOfDay(manualTimeOfDay === "sunset" ? null : "sunset")}
-                className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
-                  ${timeOfDay === "sunset"
-                    ? "bg-orange-500/30 text-orange-200 border border-orange-400/50"
-                    : "bg-white/5 text-white/40 hover:bg-white/10"
-                  }`}
-              >
-                🌅 저녁
-                {timeMode !== "manual" && manualTimeOfDay === null && autoTimeOfDay === "sunset" && (
-                  <span className="text-[10px] opacity-60">(자동)</span>
-                )}
-              </button>
-              <button
-                onClick={() => setManualTimeOfDay(manualTimeOfDay === "night" ? null : "night")}
-                className={`flex-1 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-1
-                  ${timeOfDay === "night"
-                    ? "bg-indigo-500/30 text-indigo-200 border border-indigo-400/50"
-                    : "bg-white/5 text-white/40 hover:bg-white/10"
-                  }`}
-              >
-                🌙 밤
-                {timeMode !== "manual" && manualTimeOfDay === null && autoTimeOfDay === "night" && (
-                  <span className="text-[10px] opacity-60">(자동)</span>
-                )}
-              </button>
-            </div>
+        {/* 잠수함 상태 미니 패널 */}
+        <div className="flex gap-2 mb-3 text-xs">
+          <div className={`flex-1 bg-black/30 rounded-lg px-2 py-1.5 text-center transition-colors ${
+            depth > 250 ? "text-indigo-400" : depth > 150 ? "text-blue-400" : "text-cyan-400"
+          }`}>
+            <span className="text-white/50">수심 </span>{depth}m
           </div>
-        )}
+          <div className="flex-1 bg-black/30 rounded-lg px-2 py-1.5 text-center text-white/80">
+            <span className="text-white/50">속도 </span>{speed}kn
+          </div>
+          <div className={`flex-1 bg-black/30 rounded-lg px-2 py-1.5 text-center ${
+            oxygen < 70 ? "text-amber-400" : "text-cyan-400"
+          }`}>
+            <span className="text-white/50">O2 </span>{oxygen}%
+          </div>
+          <div className={`flex-1 bg-black/30 rounded-lg px-2 py-1.5 text-center ${
+            battery < 60 ? "text-amber-400" : "text-green-400"
+          }`}>
+            <span className="text-white/50">BAT </span>{battery}%
+          </div>
+        </div>
 
         {/* Progress bar */}
         <div className="bg-black/30 backdrop-blur-sm rounded-xl p-3">
@@ -461,78 +372,45 @@ export default function VoyagePage() {
         </div>
       </div>
 
-      {/* Pause button - 정박하기 버튼 (1회만 사용 가능) */}
-      {status === "sailing" && !showComplete && !isPaused && !pauseUsed && (
-        <div className="fixed bottom-36 left-1/2 -translate-x-1/2 z-40">
-          <button
-            onClick={handlePause}
-            className="px-5 py-3 min-h-[44px] bg-white/10 text-white/80 rounded-full text-sm
-                     border border-white/20 backdrop-blur-sm transition-all duration-200
-                     hover:bg-white/20 flex items-center gap-2"
-          >
-            <Anchor className="w-4 h-4" />
-            정박하기 (1회)
-          </button>
-        </div>
-      )}
-
-      {/* Pause overlay - 정박 장면 */}
+      {/* Pause overlay - 부상 장면 */}
       {isPaused && (
-        <div className="fixed inset-0 z-30 bg-gradient-to-b from-slate-900/95 via-blue-950/95 to-slate-900/95 flex items-center justify-center">
+        <div className="fixed inset-0 z-30 bg-gradient-to-b from-slate-900/95 via-blue-950/95 to-slate-900/95 flex items-start justify-center overflow-y-auto pt-20">
           <div className="text-center space-y-6 px-8">
-            {/* 바다 배경 */}
-            <div className="relative w-64 h-40 mx-auto overflow-hidden rounded-2xl bg-gradient-to-b from-blue-900 to-blue-950">
-              {/* 파도 애니메이션 */}
-              <div className="absolute bottom-0 left-0 right-0">
-                <div className="flex">
-                  {[...Array(8)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="text-3xl animate-bounce"
-                      style={{
-                        animationDelay: `${i * 0.2}s`,
-                        animationDuration: "2s",
-                      }}
-                    >
-                      🌊
-                    </div>
-                  ))}
-                </div>
+            {/* 해저 배경 */}
+            <div className="relative w-64 h-40 mx-auto overflow-hidden rounded-2xl bg-gradient-to-b from-cyan-900 to-blue-950">
+              {/* 기포 애니메이션 */}
+              <div className="absolute inset-0">
+                {[...Array(12)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="absolute w-2 h-2 bg-cyan-300/30 rounded-full animate-ping"
+                    style={{
+                      left: `${10 + (i * 7) % 80}%`,
+                      bottom: `${10 + (i * 13) % 60}%`,
+                      animationDelay: `${i * 0.3}s`,
+                      animationDuration: "2s",
+                    }}
+                  />
+                ))}
               </div>
 
-              {/* 정박한 배 */}
+              {/* 부상 중인 잠수함 */}
               <div className="absolute top-1/3 left-1/2 -translate-x-1/2">
-                <div className="relative">
-                  <span className="text-6xl block animate-pulse" style={{ animationDuration: "3s" }}>
-                    🚢
-                  </span>
-                  {/* 닻 */}
-                  <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
-                    <Anchor className="w-8 h-8 text-amber-400 animate-bounce" style={{ animationDuration: "2s" }} />
-                  </div>
-                </div>
+                <SubmarineIcon size={64} />
               </div>
 
-              {/* 달/별 */}
-              <div className="absolute top-2 right-4">
-                <span className="text-2xl">🌙</span>
-              </div>
-              <div className="absolute top-4 left-4">
-                <span className="text-sm animate-pulse">✨</span>
-              </div>
-              <div className="absolute top-6 left-12">
-                <span className="text-xs animate-pulse" style={{ animationDelay: "0.5s" }}>✨</span>
-              </div>
+              {/* 수면 빛 */}
+              <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-cyan-400/20 to-transparent" />
             </div>
 
-            {/* 정박 메시지 */}
+            {/* 부상 메시지 */}
             <div className="space-y-2">
               <div className="flex items-center justify-center gap-2">
-                <Anchor className="w-6 h-6 text-cyan-400" />
-                <h2 className="text-2xl font-bold text-white">정박 중...</h2>
+                <SubmarineIcon size={24} />
+                <h2 className="text-2xl font-bold text-white">부상 중...</h2>
               </div>
               <p className="text-blue-200/70 text-sm">
-                잠시 쉬어가세요. 준비되면 항해를 재개합니다.
+                잠시 부상합니다. 준비되면 잠항을 재개합니다.
               </p>
             </div>
 
@@ -556,12 +434,10 @@ export default function VoyagePage() {
             {/* 재개 버튼 */}
             <button
               onClick={handlePause}
-              className="px-8 py-4 min-h-[52px] bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-2xl font-bold text-lg
-                       shadow-lg shadow-cyan-500/30 transition-all duration-200
-                       hover:from-cyan-400 hover:to-blue-400 active:scale-95 flex items-center gap-3 mx-auto"
+              className="px-8 py-4 min-h-[52px] bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-2xl font-bold text-lg shadow-lg shadow-cyan-500/30 transition-all duration-200 hover:from-cyan-400 hover:to-blue-400 active:scale-95 flex items-center gap-3 mx-auto"
             >
-              <Ship className="w-6 h-6" />
-              항해 재개
+              <SubmarineIcon size={24} />
+              잠항 재개
             </button>
           </div>
         </div>
@@ -572,15 +448,15 @@ export default function VoyagePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="text-center space-y-4">
             <div className="w-20 h-20 mx-auto bg-gradient-to-br from-green-400 to-cyan-400 rounded-full flex items-center justify-center">
-              <Ship className="w-10 h-10 text-white" />
+              <SubmarineIcon size={40} />
             </div>
             <h2 className="text-3xl font-bold text-white">
-              항해 완료!
+              잠항 완료!
             </h2>
             <p className="text-xl text-cyan-400">
               {arrivalPort.countryFlag} {arrivalPort.nameKo} 도착
             </p>
-            <p className="text-blue-200/60">잠시 후 항구로 이동합니다...</p>
+            <p className="text-blue-200/60">잠시 후 도착합니다...</p>
           </div>
         </div>
       )}

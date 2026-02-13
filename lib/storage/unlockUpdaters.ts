@@ -107,7 +107,7 @@ export function addVisitedPort(portId: string): ClimbFocusData {
 }
 
 /**
- * 항해 티켓 추가
+ * 잠항 티켓 추가
  */
 export function addVoyageTicket(ticket: VoyageTicket): ClimbFocusData {
   const prev = getData();

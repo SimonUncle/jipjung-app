@@ -18,11 +18,11 @@ export function useSound() {
   useEffect(() => {
     if (typeof document === "undefined") return;
 
-    const handleInteraction = () => {
+    const handleInteraction = async () => {
       if (!hasInteracted.current) {
         hasInteracted.current = true;
-        resumeAudioContext();
         soundManager.init();
+        await resumeAudioContext();
       }
     };
 
@@ -51,22 +51,6 @@ export function useSound() {
     soundManager.fadeOut(type, duration);
   }, []);
 
-  const playClimbingSounds = useCallback(() => {
-    soundManager.playClimbingSounds();
-  }, []);
-
-  const stopClimbingSounds = useCallback(() => {
-    soundManager.stopClimbingSounds();
-  }, []);
-
-  const playRestSounds = useCallback(() => {
-    soundManager.playRestSounds();
-  }, []);
-
-  const stopRestSounds = useCallback(() => {
-    soundManager.stopRestSounds();
-  }, []);
-
   const playVoyageSounds = useCallback(() => {
     soundManager.playVoyageSounds();
   }, []);
@@ -75,8 +59,28 @@ export function useSound() {
     soundManager.stopVoyageSounds();
   }, []);
 
-  const playShipHorn = useCallback(() => {
-    soundManager.playShipHorn();
+  const playUnderwaterSounds = useCallback(() => {
+    soundManager.playUnderwaterSounds();
+  }, []);
+
+  const stopUnderwaterSounds = useCallback(() => {
+    soundManager.stopUnderwaterSounds();
+  }, []);
+
+  const playSurfaceSounds = useCallback(() => {
+    soundManager.playSurfaceSounds();
+  }, []);
+
+  const stopSurfaceSounds = useCallback(() => {
+    soundManager.stopSurfaceSounds();
+  }, []);
+
+  const playDiveHorn = useCallback(() => {
+    soundManager.playDiveHorn();
+  }, []);
+
+  const playEventSound = useCallback((eventType: string) => {
+    soundManager.playEventSound(eventType);
   }, []);
 
   const stopAll = useCallback(() => {
@@ -88,13 +92,14 @@ export function useSound() {
     stop,
     fadeIn,
     fadeOut,
-    playClimbingSounds,
-    stopClimbingSounds,
-    playRestSounds,
-    stopRestSounds,
     playVoyageSounds,
     stopVoyageSounds,
-    playShipHorn,
+    playUnderwaterSounds,
+    stopUnderwaterSounds,
+    playSurfaceSounds,
+    stopSurfaceSounds,
+    playDiveHorn,
+    playEventSound,
     stopAll,
     isEnabled: data.settings.soundEnabled,
   };

@@ -24,7 +24,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 /**
- * 항해 티켓에서 카테고리별 통계 계산
+ * 잠항 티켓에서 카테고리별 통계 계산
  */
 export function calculateCategoryStats(tickets: VoyageTicket[]): CategoryStat[] {
   const stats: Record<string, CategoryStat> = {};

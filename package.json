@@ -6,11 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-routes": "node scripts/generate-sea-routes.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.0",
+    "@vercel/analytics": "^1.6.1",
     "howler": "^2.2.4",
     "leaflet": "^1.9.4",
     "leaflet-rotate": "^0.2.8",

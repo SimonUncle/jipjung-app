@@ -1,6 +1,7 @@
 "use client";
 
-import { Ship, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
+import { SubmarineIcon } from "@/components/submarine/SubmarineIcon";
 import { Port } from "@/lib/ports";
 
 interface QuickStartProps {
@@ -29,7 +30,7 @@ export function QuickStart({ lastDestination, onQuickStart }: QuickStartProps) {
           {lastDestination.nameKo} 다시 출항
         </span>
       </div>
-      <Ship className="w-5 h-5 text-cyan-400 ml-auto" />
+      <SubmarineIcon size={20} className="text-cyan-400 ml-auto" />
     </button>
   );
 }

@@ -1,7 +1,7 @@
 {
-  "name": "Focus Voyage - 집중 항해",
-  "short_name": "Focus Voyage",
-  "description": "집중하면 배가 목적지를 향해 항해하는 감성 집중 타이머",
+  "name": "Focus Submarine",
+  "short_name": "Focus Sub",
+  "description": "집중하면 잠수함이 목적지를 향해 잠항하는 감성 집중 타이머",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0f",

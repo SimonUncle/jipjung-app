@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Lock, User, Ship } from "lucide-react";
+import { Mail, Lock, User } from "lucide-react";
+import { SubmarineIcon } from "@/components/submarine/SubmarineIcon";
 import { useAuthContext } from "./AuthProvider";
 import { Modal, Button, Input } from "@/components/ui";
 import { SocialButtons } from "./SocialButtons";
@@ -41,8 +42,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         await resetPassword(email);
         setSuccess("비밀번호 재설정 이메일을 보냈습니다!");
       }
-    } catch (err: any) {
-      setError(err.message || "오류가 발생했습니다.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -52,8 +53,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError(null);
     try {
       await signInWithGoogle();
-    } catch (err: any) {
-      setError(err.message || "Google 로그인 중 오류가 발생했습니다.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Google 로그인 중 오류가 발생했습니다.");
     }
   };
 
@@ -61,8 +62,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError(null);
     try {
       await signInWithKakao();
-    } catch (err: any) {
-      setError(err.message || "카카오 로그인 중 오류가 발생했습니다.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "카카오 로그인 중 오류가 발생했습니다.");
     }
   };
 
@@ -71,7 +72,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       {/* 헤더 */}
       <div className="pt-8 pb-4 text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <Ship className="w-8 h-8 text-cyan-400" />
+          <SubmarineIcon className="w-8 h-8 text-cyan-400" size={32} />
           <h2 className="text-2xl font-bold text-white">
             {mode === "login" && "로그인"}
             {mode === "signup" && "회원가입"}
@@ -80,7 +81,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         </div>
         <p className="text-sm text-blue-300/60">
           {mode === "login" && "계정에 로그인하세요"}
-          {mode === "signup" && "새로운 항해를 시작하세요"}
+          {mode === "signup" && "새로운 잠항을 시작하세요"}
           {mode === "forgot" && "이메일을 입력하세요"}
         </p>
       </div>
@@ -107,7 +108,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               icon={<User className="w-4 h-4" />}
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="항해사 닉네임"
+              placeholder="잠항사 닉네임"
             />
           )}
 

@@ -16,12 +16,12 @@ export const PORT_REGIONS: Record<string, string[]> = {
 
 // 전체 업적 목록
 export const ACHIEVEMENTS: Achievement[] = [
-  // 항해 횟수
+  // 잠항 횟수
   {
     id: "first_voyage",
     name: "First Voyage",
-    nameKo: "첫 항해",
-    descriptionKo: "첫 번째 항해를 완료하세요",
+    nameKo: "첫 잠항",
+    descriptionKo: "첫 번째 잠항을 완료하세요",
     icon: "⛵",
     category: "voyage",
     condition: { type: "voyages", value: 1 },
@@ -29,8 +29,8 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: "navigator",
     name: "Navigator",
-    nameKo: "항해사",
-    descriptionKo: "항해 10회 완료",
+    nameKo: "잠항사",
+    descriptionKo: "잠항 10회 완료",
     icon: "🧭",
     category: "voyage",
     condition: { type: "voyages", value: 10 },
@@ -39,7 +39,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: "captain",
     name: "Captain",
     nameKo: "선장",
-    descriptionKo: "항해 50회 완료",
+    descriptionKo: "잠항 50회 완료",
     icon: "👨‍✈️",
     category: "voyage",
     condition: { type: "voyages", value: 50 },
@@ -48,7 +48,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: "admiral",
     name: "Admiral",
     nameKo: "제독",
-    descriptionKo: "항해 100회 완료",
+    descriptionKo: "잠항 100회 완료",
     icon: "⚓",
     category: "voyage",
     condition: { type: "voyages", value: 100 },
@@ -108,7 +108,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: "streak_7",
     name: "Streak Master",
     nameKo: "7일 연속",
-    descriptionKo: "7일 연속 항해",
+    descriptionKo: "7일 연속 잠항",
     icon: "🔥",
     category: "streak",
     condition: { type: "streak", value: 7 },
@@ -117,7 +117,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: "streak_30",
     name: "Month Streak",
     nameKo: "30일 연속",
-    descriptionKo: "30일 연속 항해",
+    descriptionKo: "30일 연속 잠항",
     icon: "💎",
     category: "streak",
     condition: { type: "streak", value: 30 },

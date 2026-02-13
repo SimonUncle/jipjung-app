@@ -98,7 +98,7 @@ export function getDistanceBetween(fromId: string, toId: string): number {
   );
 }
 
-// 항해 진행률에 따른 현재 위치 계산 (보간)
+// 잠항 진행률에 따른 현재 위치 계산 (보간)
 // 바다 경로가 있으면 그것을 따라가고, 없으면 직선 보간
 export function interpolatePosition(
   from: Port,
@@ -206,5 +206,5 @@ export const DURATION_OPTIONS = [
   { value: 15, label: "15분", emoji: "⛵" },
   { value: 25, label: "25분", emoji: "🚤" },
   { value: 45, label: "45분", emoji: "🛳️" },
-  { value: 60, label: "60분", emoji: "🚢" },
+  { value: 60, label: "60분", emoji: "🤿" },
 ];

@@ -35,490 +35,10 @@ function createBrownNoiseBuffer(ctx: AudioContext, duration: number): AudioBuffe
     const white = Math.random() * 2 - 1;
     data[i] = (lastOut + (0.02 * white)) / 1.02;
     lastOut = data[i];
-    data[i] *= 3.5; // 볼륨 보정
+    data[i] *= 10.0; // 볼륨 보정 (모바일 스피커에서 들리도록)
   }
 
   return buffer;
-}
-
-// 자연스러운 바람 소리 생성 (다중 레이어)
-export function createWindSound(): {
-  start: () => void;
-  stop: () => void;
-  setVolume: (v: number) => void;
-} {
-  const ctx = getAudioContext();
-  let sources: AudioBufferSourceNode[] = [];
-  let gainNode: GainNode | null = null;
-  let isPlaying = false;
-
-  const start = () => {
-    if (isPlaying) return;
-
-    // 메인 게인
-    gainNode = ctx.createGain();
-    gainNode.gain.value = 0.04; // 백색소음 느낌으로 작게
-
-    // 레이어 1: 저주파 바람 (브라운 노이즈)
-    const brownBuffer = createBrownNoiseBuffer(ctx, 3);
-    const brownSource = ctx.createBufferSource();
-    brownSource.buffer = brownBuffer;
-    brownSource.loop = true;
-
-    const lowpass1 = ctx.createBiquadFilter();
-    lowpass1.type = "lowpass";
-    lowpass1.frequency.value = 150;
-    lowpass1.Q.value = 0.5;
-
-    const gain1 = ctx.createGain();
-    gain1.gain.value = 0.6;
-
-    // LFO로 세기 변화 (느리게)
-    const lfo1 = ctx.createOscillator();
-    const lfoGain1 = ctx.createGain();
-    lfo1.frequency.value = 0.08; // 매우 느린 변화
-    lfoGain1.gain.value = 0.3;
-    lfo1.connect(lfoGain1);
-    lfoGain1.connect(gain1.gain);
-    lfo1.start();
-
-    brownSource.connect(lowpass1);
-    lowpass1.connect(gain1);
-    gain1.connect(gainNode);
-
-    // 레이어 2: 중주파 바람 흐름
-    const noiseBuffer2 = createNoiseBuffer(ctx, 2);
-    const noiseSource2 = ctx.createBufferSource();
-    noiseSource2.buffer = noiseBuffer2;
-    noiseSource2.loop = true;
-
-    const bandpass2 = ctx.createBiquadFilter();
-    bandpass2.type = "bandpass";
-    bandpass2.frequency.value = 300;
-    bandpass2.Q.value = 0.8;
-
-    const gain2 = ctx.createGain();
-    gain2.gain.value = 0.25;
-
-    // 다른 속도의 LFO
-    const lfo2 = ctx.createOscillator();
-    const lfoGain2 = ctx.createGain();
-    lfo2.frequency.value = 0.15;
-    lfoGain2.gain.value = 0.15;
-    lfo2.connect(lfoGain2);
-    lfoGain2.connect(gain2.gain);
-    lfo2.start();
-
-    noiseSource2.connect(bandpass2);
-    bandpass2.connect(gain2);
-    gain2.connect(gainNode);
-
-    // 레이어 3: 미세한 고주파 (나뭇잎 스치는 소리)
-    const noiseBuffer3 = createNoiseBuffer(ctx, 1.5);
-    const noiseSource3 = ctx.createBufferSource();
-    noiseSource3.buffer = noiseBuffer3;
-    noiseSource3.loop = true;
-
-    const highpass3 = ctx.createBiquadFilter();
-    highpass3.type = "highpass";
-    highpass3.frequency.value = 2000;
-    highpass3.Q.value = 0.3;
-
-    const gain3 = ctx.createGain();
-    gain3.gain.value = 0.08;
-
-    noiseSource3.connect(highpass3);
-    highpass3.connect(gain3);
-    gain3.connect(gainNode);
-
-    gainNode.connect(ctx.destination);
-
-    brownSource.start();
-    noiseSource2.start();
-    noiseSource3.start();
-
-    sources = [brownSource, noiseSource2, noiseSource3];
-    isPlaying = true;
-  };
-
-  const stop = () => {
-    if (isPlaying) {
-      sources.forEach((s) => {
-        s.stop();
-        s.disconnect();
-      });
-      sources = [];
-      isPlaying = false;
-    }
-  };
-
-  const setVolume = (v: number) => {
-    if (gainNode) {
-      gainNode.gain.value = v;
-    }
-  };
-
-  return { start, stop, setVolume };
-}
-
-// 자연스러운 새소리 생성
-export function createBirdSound(): {
-  start: () => void;
-  stop: () => void;
-} {
-  const ctx = getAudioContext();
-  let intervalId: NodeJS.Timeout | null = null;
-  let isPlaying = false;
-
-  const playChirp = (pattern: number) => {
-    // 여러 패턴의 새소리
-    const patterns = [
-      // 패턴 0: 짧은 단음 (참새)
-      () => {
-        const baseFreq = 2200 + Math.random() * 600;
-        playNote(baseFreq, 0.08, 0.012);
-      },
-      // 패턴 1: 두 음 (찌르레기)
-      () => {
-        const baseFreq = 1800 + Math.random() * 400;
-        playNote(baseFreq, 0.1, 0.01);
-        setTimeout(() => playNote(baseFreq * 1.2, 0.08, 0.008), 120);
-      },
-      // 패턴 2: 세 음 트릴 (굴뚝새)
-      () => {
-        const baseFreq = 2400 + Math.random() * 500;
-        playNote(baseFreq, 0.06, 0.008);
-        setTimeout(() => playNote(baseFreq * 1.15, 0.06, 0.008), 80);
-        setTimeout(() => playNote(baseFreq * 0.95, 0.08, 0.01), 160);
-      },
-      // 패턴 3: 길게 지저귀기 (휘파람새)
-      () => {
-        const baseFreq = 1600 + Math.random() * 300;
-        const osc = ctx.createOscillator();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
-        osc.frequency.linearRampToValueAtTime(baseFreq * 1.3, ctx.currentTime + 0.15);
-        osc.frequency.linearRampToValueAtTime(baseFreq * 0.9, ctx.currentTime + 0.25);
-
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.012, ctx.currentTime + 0.02);
-        gain.gain.linearRampToValueAtTime(0.008, ctx.currentTime + 0.15);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
-      },
-    ];
-
-    const playNote = (freq: number, duration: number, volume: number) => {
-      const osc = ctx.createOscillator();
-      // Sine + 약간의 배음
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(freq * 1.05, ctx.currentTime + duration * 0.3);
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.98, ctx.currentTime + duration);
-
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + duration);
-    };
-
-    patterns[pattern % patterns.length]();
-  };
-
-  const start = () => {
-    if (isPlaying) return;
-    isPlaying = true;
-
-    let patternIndex = 0;
-    const scheduleChirp = () => {
-      if (!isPlaying) return;
-      playChirp(patternIndex);
-      patternIndex = (patternIndex + 1) % 4;
-
-      // 더 자연스러운 간격 (4-10초)
-      const nextDelay = 4000 + Math.random() * 6000;
-      intervalId = setTimeout(scheduleChirp, nextDelay);
-    };
-
-    // 첫 새소리는 2-4초 후에
-    intervalId = setTimeout(scheduleChirp, 2000 + Math.random() * 2000);
-  };
-
-  const stop = () => {
-    isPlaying = false;
-    if (intervalId) {
-      clearTimeout(intervalId);
-      intervalId = null;
-    }
-  };
-
-  return { start, stop };
-}
-
-// 자연스러운 발소리 생성 (흙/자갈 밟는 느낌)
-export function createFootstepsSound(): {
-  start: () => void;
-  stop: () => void;
-} {
-  const ctx = getAudioContext();
-  let intervalId: NodeJS.Timeout | null = null;
-  let isPlaying = false;
-
-  const playStep = () => {
-    // 임팩트 + 크런치 레이어링
-    const noise = ctx.createBufferSource();
-    const noiseBuffer = createNoiseBuffer(ctx, 0.2);
-    noise.buffer = noiseBuffer;
-
-    // 밴드패스 필터 (흙/자갈 느낌)
-    const bandpass = ctx.createBiquadFilter();
-    bandpass.type = "bandpass";
-    bandpass.frequency.value = 600 + Math.random() * 400; // 600-1000Hz
-    bandpass.Q.value = 1.5;
-
-    // 로우패스로 부드럽게
-    const lowpass = ctx.createBiquadFilter();
-    lowpass.type = "lowpass";
-    lowpass.frequency.value = 2500;
-
-    // 엔벨로프 (착지 임팩트)
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.025, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.02, ctx.currentTime + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-
-    noise.connect(bandpass);
-    bandpass.connect(lowpass);
-    lowpass.connect(gain);
-    gain.connect(ctx.destination);
-    noise.start();
-    noise.stop(ctx.currentTime + 0.2);
-
-    // 약간의 크런치 (자갈)
-    if (Math.random() > 0.5) {
-      setTimeout(() => {
-        const crunch = ctx.createBufferSource();
-        const crunchBuffer = createNoiseBuffer(ctx, 0.08);
-        crunch.buffer = crunchBuffer;
-
-        const highpass = ctx.createBiquadFilter();
-        highpass.type = "highpass";
-        highpass.frequency.value = 1500;
-
-        const crunchGain = ctx.createGain();
-        crunchGain.gain.setValueAtTime(0.008, ctx.currentTime);
-        crunchGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
-
-        crunch.connect(highpass);
-        highpass.connect(crunchGain);
-        crunchGain.connect(ctx.destination);
-        crunch.start();
-        crunch.stop(ctx.currentTime + 0.08);
-      }, 30 + Math.random() * 20);
-    }
-  };
-
-  const start = () => {
-    if (isPlaying) return;
-    isPlaying = true;
-
-    // 자연스러운 걸음 간격 (700-1100ms)
-    const scheduleStep = () => {
-      if (!isPlaying) return;
-      playStep();
-      const nextDelay = 700 + Math.random() * 400;
-      intervalId = setTimeout(scheduleStep, nextDelay);
-    };
-    scheduleStep();
-  };
-
-  const stop = () => {
-    isPlaying = false;
-    if (intervalId) {
-      clearTimeout(intervalId);
-      intervalId = null;
-    }
-  };
-
-  return { start, stop };
-}
-
-// 자연스러운 캠프파이어 소리
-export function createCampfireSound(): {
-  start: () => void;
-  stop: () => void;
-} {
-  const ctx = getAudioContext();
-  let sources: AudioBufferSourceNode[] = [];
-  let isPlaying = false;
-  let crackleInterval: NodeJS.Timeout | null = null;
-
-  const playCrackle = () => {
-    // 다양한 크래클 음
-    const noise = ctx.createBufferSource();
-    const noiseBuffer = createNoiseBuffer(ctx, 0.08 + Math.random() * 0.06);
-    noise.buffer = noiseBuffer;
-
-    const bandpass = ctx.createBiquadFilter();
-    bandpass.type = "bandpass";
-    bandpass.frequency.value = 500 + Math.random() * 1000; // 더 다양한 음정
-    bandpass.Q.value = 2 + Math.random() * 2;
-
-    const gain = ctx.createGain();
-    const volume = 0.025 + Math.random() * 0.02;
-    gain.gain.setValueAtTime(volume, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-
-    noise.connect(bandpass);
-    bandpass.connect(gain);
-    gain.connect(ctx.destination);
-    noise.start();
-    noise.stop(ctx.currentTime + 0.12);
-  };
-
-  const playPop = () => {
-    // 장작 터지는 소리 (낮은 임팩트)
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(150 + Math.random() * 100, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.05);
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.03, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.1);
-  };
-
-  const start = () => {
-    if (isPlaying) return;
-    isPlaying = true;
-
-    // 베이스 노이즈 (불꽃 소리)
-    const noiseBuffer = createBrownNoiseBuffer(ctx, 2);
-    const source = ctx.createBufferSource();
-    source.buffer = noiseBuffer;
-    source.loop = true;
-
-    const lowpass = ctx.createBiquadFilter();
-    lowpass.type = "lowpass";
-    lowpass.frequency.value = 180;
-
-    const gain = ctx.createGain();
-    gain.gain.value = 0.035;
-
-    source.connect(lowpass);
-    lowpass.connect(gain);
-    gain.connect(ctx.destination);
-    source.start();
-    sources.push(source);
-
-    // 불규칙한 크래클
-    const scheduleCrackle = () => {
-      if (!isPlaying) return;
-
-      playCrackle();
-
-      // 가끔 팝 소리
-      if (Math.random() > 0.85) {
-        setTimeout(playPop, 50 + Math.random() * 100);
-      }
-
-      // 불규칙한 간격 (지수 분포에 가깝게)
-      const baseDelay = 150;
-      const randomFactor = Math.random() * Math.random() * 600;
-      const nextDelay = baseDelay + randomFactor;
-
-      crackleInterval = setTimeout(scheduleCrackle, nextDelay);
-    };
-    scheduleCrackle();
-  };
-
-  const stop = () => {
-    isPlaying = false;
-    sources.forEach((s) => {
-      s.stop();
-      s.disconnect();
-    });
-    sources = [];
-    if (crackleInterval) {
-      clearTimeout(crackleInterval);
-      crackleInterval = null;
-    }
-  };
-
-  return { start, stop };
-}
-
-// 휴식 음악 (부드러운 앰비언트)
-export function createAmbientMusic(): {
-  start: () => void;
-  stop: () => void;
-} {
-  const ctx = getAudioContext();
-  let oscillators: OscillatorNode[] = [];
-  let gains: GainNode[] = [];
-  let isPlaying = false;
-
-  // 화음 주파수 (Am7 - 더 평화로운 느낌)
-  const frequencies = [110, 130.81, 164.81, 196]; // A2, C3, E3, G3
-
-  const start = () => {
-    if (isPlaying) return;
-    isPlaying = true;
-
-    frequencies.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-
-      const gain = ctx.createGain();
-      gain.gain.value = 0;
-      gain.gain.linearRampToValueAtTime(0.012, ctx.currentTime + 4); // 천천히 페이드 인
-
-      // 느린 LFO로 볼륨 변화
-      const lfo = ctx.createOscillator();
-      const lfoGain = ctx.createGain();
-      lfo.frequency.value = 0.05 + i * 0.02;
-      lfoGain.gain.value = 0.004;
-      lfo.connect(lfoGain);
-      lfoGain.connect(gain.gain);
-      lfo.start();
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-
-      oscillators.push(osc);
-      gains.push(gain);
-    });
-  };
-
-  const stop = () => {
-    isPlaying = false;
-    oscillators.forEach((osc) => {
-      osc.stop();
-      osc.disconnect();
-    });
-    gains.forEach((gain) => gain.disconnect());
-    oscillators = [];
-    gains = [];
-  };
-
-  return { start, stop };
 }
 
 // 체크포인트 효과음
@@ -602,15 +122,15 @@ export function playFailSound() {
 }
 
 // AudioContext 재개
-export function resumeAudioContext() {
+export async function resumeAudioContext() {
   const ctx = getAudioContext();
   if (ctx.state === "suspended") {
-    ctx.resume();
+    await ctx.resume();
   }
 }
 
 // ============================
-// 항해 사운드
+// 잠항 사운드
 // ============================
 
 // 파도 소리 생성 (배경 앰비언트 + 개별 파도 이벤트)
@@ -619,7 +139,8 @@ export function createOceanWavesSound(): {
   stop: () => void;
 } {
   const ctx = getAudioContext();
-  let sources: AudioBufferSourceNode[] = [];
+  // 모든 노드를 클로저에 저장 (GC 방지)
+  let nodes: AudioNode[] = [];
   let isPlaying = false;
   let waveIntervalId: NodeJS.Timeout | null = null;
 
@@ -723,11 +244,11 @@ export function createOceanWavesSound(): {
     if (isPlaying) return;
     isPlaying = true;
 
-    // 메인 게인 (배경 앰비언트는 더 작게)
+    // 메인 게인
     const mainGain = ctx.createGain();
-    mainGain.gain.value = 0.04; // 기존 0.08에서 절반으로 감소
+    mainGain.gain.value = 0.05;
 
-    // 레이어 1: 저주파 배경 바다 소리 (브라운 노이즈)
+    // 레이어 1: 배경 바다 소리 (브라운 노이즈)
     const waveBuffer = createBrownNoiseBuffer(ctx, 4);
     const waveSource = ctx.createBufferSource();
     waveSource.buffer = waveBuffer;
@@ -735,7 +256,7 @@ export function createOceanWavesSound(): {
 
     const lowpass = ctx.createBiquadFilter();
     lowpass.type = "lowpass";
-    lowpass.frequency.value = 200;
+    lowpass.frequency.value = 800;
 
     const waveGain = ctx.createGain();
     waveGain.gain.value = 0.5;
@@ -753,7 +274,7 @@ export function createOceanWavesSound(): {
     lowpass.connect(waveGain);
     waveGain.connect(mainGain);
 
-    // 레이어 2: 미세한 배경 쉬~소리
+    // 레이어 2: 배경 쉬~소리 (폰 스피커에서 잘 들리는 대역)
     const ambientBuffer = createNoiseBuffer(ctx, 2);
     const ambientSource = ctx.createBufferSource();
     ambientSource.buffer = ambientBuffer;
@@ -764,7 +285,7 @@ export function createOceanWavesSound(): {
     ambientHighpass.frequency.value = 2000;
 
     const ambientGain = ctx.createGain();
-    ambientGain.gain.value = 0.08;
+    ambientGain.gain.value = 0.15;
 
     ambientSource.connect(ambientHighpass);
     ambientHighpass.connect(ambientGain);
@@ -775,7 +296,8 @@ export function createOceanWavesSound(): {
     waveSource.start();
     ambientSource.start();
 
-    sources = [waveSource, ambientSource];
+    // 모든 노드 참조 유지 (GC 방지 핵심)
+    nodes = [mainGain, waveSource, lowpass, waveGain, waveLfo, waveLfoGain, ambientSource, ambientHighpass, ambientGain];
 
     // 첫 파도는 2~4초 후에
     setTimeout(() => {
@@ -787,18 +309,18 @@ export function createOceanWavesSound(): {
   };
 
   const stop = () => {
-    if (isPlaying) {
-      sources.forEach((s) => {
-        s.stop();
-        s.disconnect();
-      });
-      sources = [];
-      isPlaying = false;
+    if (!isPlaying) return;
+    isPlaying = false;
 
-      if (waveIntervalId) {
-        clearTimeout(waveIntervalId);
-        waveIntervalId = null;
-      }
+    nodes.forEach((n) => {
+      try { if ('stop' in n && typeof (n as any).stop === 'function') (n as any).stop(); } catch {}
+      try { n.disconnect(); } catch {}
+    });
+    nodes = [];
+
+    if (waveIntervalId) {
+      clearTimeout(waveIntervalId);
+      waveIntervalId = null;
     }
   };
 
@@ -889,65 +411,86 @@ export function createSeagullSound(): {
   return { start, stop };
 }
 
-// 배 엔진 소리 생성
-export function createShipEngineSound(): {
+// 잠수함 엔진 소리 생성
+export function createSubmarineEngineSound(): {
   start: () => void;
   stop: () => void;
 } {
   const ctx = getAudioContext();
-  let sources: AudioBufferSourceNode[] = [];
+  // 모든 노드를 클로저에 저장 (GC 방지)
+  let nodes: AudioNode[] = [];
   let isPlaying = false;
 
   const start = () => {
     if (isPlaying) return;
     isPlaying = true;
 
-    // 저주파 엔진 럼블
+    // 메인 게인
+    const mainGain = ctx.createGain();
+    mainGain.gain.value = 0.07;
+
+    // 레이어 1: 엔진 험 (순음 — 폰 스피커에서 확실히 들림)
+    const hum = ctx.createOscillator();
+    hum.type = "sine";
+    hum.frequency.value = 200;
+
+    const humGain = ctx.createGain();
+    humGain.gain.value = 0.25;
+
+    hum.connect(humGain);
+    humGain.connect(mainGain);
+    hum.start();
+
+    // 레이어 2: 노이즈 텍스처 (브라운 노이즈 → bandpass)
     const engineBuffer = createBrownNoiseBuffer(ctx, 3);
     const engineSource = ctx.createBufferSource();
     engineSource.buffer = engineBuffer;
     engineSource.loop = true;
 
-    const lowpass = ctx.createBiquadFilter();
-    lowpass.type = "lowpass";
-    lowpass.frequency.value = 80;
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.frequency.value = 300;
+    bandpass.Q.value = 1.0;
 
-    const gain = ctx.createGain();
-    gain.gain.value = 0.03;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0.15;
 
-    // 미세한 진동
-    const vibrato = ctx.createOscillator();
-    const vibratoGain = ctx.createGain();
-    vibrato.frequency.value = 12; // 엔진 진동
-    vibratoGain.gain.value = 0.008;
-    vibrato.connect(vibratoGain);
-    vibratoGain.connect(gain.gain);
-    vibrato.start();
-
-    engineSource.connect(lowpass);
-    lowpass.connect(gain);
-    gain.connect(ctx.destination);
+    engineSource.connect(bandpass);
+    bandpass.connect(noiseGain);
+    noiseGain.connect(mainGain);
     engineSource.start();
 
-    sources = [engineSource];
+    // 미세한 진동 (LFO → mainGain 변조)
+    const vibrato = ctx.createOscillator();
+    const vibratoGain = ctx.createGain();
+    vibrato.frequency.value = 4;
+    vibratoGain.gain.value = 0.03;
+    vibrato.connect(vibratoGain);
+    vibratoGain.connect(mainGain.gain);
+    vibrato.start();
+
+    mainGain.connect(ctx.destination);
+
+    // 모든 노드 참조 유지 (GC 방지 핵심)
+    nodes = [mainGain, hum, humGain, engineSource, bandpass, noiseGain, vibrato, vibratoGain];
   };
 
   const stop = () => {
-    if (isPlaying) {
-      sources.forEach((s) => {
-        s.stop();
-        s.disconnect();
-      });
-      sources = [];
-      isPlaying = false;
-    }
+    if (!isPlaying) return;
+    isPlaying = false;
+
+    nodes.forEach((n) => {
+      try { if ('stop' in n && typeof (n as any).stop === 'function') (n as any).stop(); } catch {}
+      try { n.disconnect(); } catch {}
+    });
+    nodes = [];
   };
 
   return { start, stop };
 }
 
-// 배 경적 효과음 (원샷) - 부드러운 "부~" 경적
-export function playShipHornSound() {
+// 잠항 호른 효과음 (원샷) - 부드러운 "부~" 경적
+export function playDiveHornSound() {
   const ctx = getAudioContext();
 
   // 두 개의 톤이 겹친 경적 소리 (더 깊은 톤)
@@ -976,13 +519,14 @@ export function playShipHornSound() {
   });
 }
 
-// 물결 스침 소리 (배가 물을 가르며 지나가는 소리)
+// 물결 스침 소리 (잠수함이 물을 가르며 지나가는 소리)
 export function createWaterFlowSound(): {
   start: () => void;
   stop: () => void;
 } {
   const ctx = getAudioContext();
-  let sources: AudioBufferSourceNode[] = [];
+  // 모든 노드를 클로저에 저장 (GC 방지)
+  let nodes: AudioNode[] = [];
   let isPlaying = false;
 
   const start = () => {
@@ -993,7 +537,7 @@ export function createWaterFlowSound(): {
     const mainGain = ctx.createGain();
     mainGain.gain.value = 0.04;
 
-    // 레이어 1: 물 흐르는 소리 (브라운노이즈 베이스)
+    // 레이어 1: 물 흐르는 소리 (브라운노이즈 베이스 — 보조)
     const flowBuffer = createBrownNoiseBuffer(ctx, 3);
     const flowSource = ctx.createBufferSource();
     flowSource.buffer = flowBuffer;
@@ -1001,26 +545,17 @@ export function createWaterFlowSound(): {
 
     const bandpass = ctx.createBiquadFilter();
     bandpass.type = "bandpass";
-    bandpass.frequency.value = 400;
+    bandpass.frequency.value = 500;
     bandpass.Q.value = 0.6;
 
     const flowGain = ctx.createGain();
-    flowGain.gain.value = 0.5;
-
-    // 아주 미세한 LFO (물결 변화)
-    const lfo = ctx.createOscillator();
-    const lfoGain = ctx.createGain();
-    lfo.frequency.value = 0.1;
-    lfoGain.gain.value = 0.1;
-    lfo.connect(lfoGain);
-    lfoGain.connect(flowGain.gain);
-    lfo.start();
+    flowGain.gain.value = 0.15;
 
     flowSource.connect(bandpass);
     bandpass.connect(flowGain);
     flowGain.connect(mainGain);
 
-    // 레이어 2: 부드러운 쉬~소리 (화이트노이즈)
+    // 레이어 2: 쉬~소리 (화이트노이즈 — 메인, 폰 스피커에서 잘 들림)
     const shushBuffer = createNoiseBuffer(ctx, 2);
     const shushSource = ctx.createBufferSource();
     shushSource.buffer = shushBuffer;
@@ -1035,31 +570,222 @@ export function createWaterFlowSound(): {
     lowpass.frequency.value = 2000;
 
     const shushGain = ctx.createGain();
-    shushGain.gain.value = 0.15;
+    shushGain.gain.value = 0.25;
 
     shushSource.connect(highpass);
     highpass.connect(lowpass);
     lowpass.connect(shushGain);
     shushGain.connect(mainGain);
 
+    // LFO로 물결 변화 (두 레이어 모두 변조)
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    lfo.frequency.value = 0.1;
+    lfoGain.gain.value = 0.05;
+    lfo.connect(lfoGain);
+    lfoGain.connect(mainGain.gain);
+    lfo.start();
+
     mainGain.connect(ctx.destination);
 
     flowSource.start();
     shushSource.start();
 
-    sources = [flowSource, shushSource];
+    // 모든 노드 참조 유지 (GC 방지 핵심)
+    nodes = [mainGain, flowSource, bandpass, flowGain, shushSource, highpass, lowpass, shushGain, lfo, lfoGain];
   };
 
   const stop = () => {
-    if (isPlaying) {
-      sources.forEach((s) => {
-        s.stop();
-        s.disconnect();
-      });
-      sources = [];
-      isPlaying = false;
-    }
+    if (!isPlaying) return;
+    isPlaying = false;
+
+    nodes.forEach((n) => {
+      try { if ('stop' in n && typeof (n as any).stop === 'function') (n as any).stop(); } catch {}
+      try { n.disconnect(); } catch {}
+    });
+    nodes = [];
   };
 
   return { start, stop };
+}
+
+// ============================
+// 이벤트 효과음 (6종)
+// ============================
+
+// 소나 핑 (마일스톤: departure, halfway, approaching)
+export function playSonarPingSound() {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(1000, now);
+  osc.frequency.exponentialRampToValueAtTime(2000, now + 0.15);
+  osc.frequency.exponentialRampToValueAtTime(1500, now + 0.3);
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.12, now + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+  const bandpass = ctx.createBiquadFilter();
+  bandpass.type = "bandpass";
+  bandpass.frequency.value = 1500;
+  bandpass.Q.value = 5;
+
+  osc.connect(bandpass);
+  bandpass.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.5);
+}
+
+// 저주파 럼블 (폭풍: storm)
+export function playStormRumbleSound() {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  const buffer = createBrownNoiseBuffer(ctx, 1.2);
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+
+  const lowpass = ctx.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.setValueAtTime(60, now);
+  lowpass.frequency.linearRampToValueAtTime(120, now + 0.4);
+  lowpass.frequency.linearRampToValueAtTime(40, now + 1.0);
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.15, now + 0.2);
+  gain.gain.linearRampToValueAtTime(0.1, now + 0.6);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+  source.connect(lowpass);
+  lowpass.connect(gain);
+  gain.connect(ctx.destination);
+  source.start(now);
+  source.stop(now + 1.2);
+}
+
+// 고래/돌고래 울음 (생물: whale_breach, dolphin_pod)
+export function playWhaleCallSound() {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(200, now);
+  osc.frequency.linearRampToValueAtTime(600, now + 0.3);
+  osc.frequency.linearRampToValueAtTime(400, now + 0.5);
+  osc.frequency.linearRampToValueAtTime(800, now + 0.8);
+  osc.frequency.linearRampToValueAtTime(300, now + 1.2);
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.08, now + 0.1);
+  gain.gain.setValueAtTime(0.06, now + 0.6);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+
+  const lowpass = ctx.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.value = 1200;
+
+  osc.connect(lowpass);
+  lowpass.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 1.5);
+}
+
+// 깊은 진동 (심해: deep_trench, volcano_glow)
+export function playDeepVibeSound() {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.value = 50;
+
+  const oscGain = ctx.createGain();
+  oscGain.gain.setValueAtTime(0, now);
+  oscGain.gain.linearRampToValueAtTime(0.1, now + 0.1);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+  const buffer = createBrownNoiseBuffer(ctx, 0.8);
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+
+  const noiseLowpass = ctx.createBiquadFilter();
+  noiseLowpass.type = "lowpass";
+  noiseLowpass.frequency.value = 100;
+
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0, now);
+  noiseGain.gain.linearRampToValueAtTime(0.06, now + 0.15);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+  osc.connect(oscGain);
+  oscGain.connect(ctx.destination);
+  noise.connect(noiseLowpass);
+  noiseLowpass.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.8);
+  noise.start(now);
+  noise.stop(now + 0.8);
+}
+
+// 소나 비프 (선박: cargo_ship, sonar_contact)
+export function playSonarBeepSound() {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  [0, 0.2].forEach((offset) => {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = 800;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, now + offset);
+    gain.gain.linearRampToValueAtTime(0.1, now + offset + 0.02);
+    gain.gain.setValueAtTime(0.1, now + offset + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.15);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now + offset);
+    osc.stop(now + offset + 0.15);
+  });
+}
+
+// 발견 차임 (기타: ruins, squid, jellyfish, cable, sunset, land)
+export function playDiscoveryChimeSound() {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  const notes = [523.25, 659.25]; // C5 → E5
+
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, now + i * 0.15);
+    gain.gain.linearRampToValueAtTime(0.08, now + i * 0.15 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.4);
+
+    const lowpass = ctx.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 3000;
+
+    osc.connect(lowpass);
+    lowpass.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now + i * 0.15);
+    osc.stop(now + i * 0.15 + 0.4);
+  });
 }

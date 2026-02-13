@@ -1,10 +1,10 @@
-// 항해 관련 상수
+// 잠항 관련 상수
 
 export const VOYAGE_CONFIG = {
   // 거리-시간 변환 비율 (km당 분)
   KM_PER_MINUTE: 50,
 
-  // 최소/최대 항해 시간 (분)
+  // 최소/최대 잠항 시간 (분)
   MIN_DURATION_MINUTES: 10,
   MAX_DURATION_MINUTES: 180,
 

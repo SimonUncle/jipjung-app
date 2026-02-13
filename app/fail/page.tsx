@@ -40,16 +40,16 @@ export default function FailPage() {
         {/* 파도 */}
         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-blue-900 to-blue-800/50 rounded-t-full" />
 
-        {/* 배 */}
+        {/* 잠수함 긴급 부상 */}
         <div
           className="absolute left-1/2 -translate-x-1/2 text-6xl transition-all duration-[2000ms]"
           style={{
-            bottom: showAnimation ? "60%" : "20%",
+            bottom: showAnimation ? "30%" : "70%",
             opacity: showAnimation ? 1 : 0.3,
-            transform: `translateX(-50%) rotate(${showAnimation ? 0 : 30}deg)`,
+            transform: `translateX(-50%) rotate(${showAnimation ? 0 : -15}deg)`,
           }}
         >
-          🚢
+          🤿
         </div>
 
         {/* 파도 효과 */}
@@ -77,18 +77,18 @@ export default function FailPage() {
       {/* 메시지 */}
       <div className="text-center space-y-4">
         <h1 className="text-2xl font-bold text-white">
-          항해가 중단되었어요
+          잠항이 중단되었어요
         </h1>
         <p className="text-blue-200/60">
-          배에서 눈을 떼면 항해를 계속할 수 없어요
+          잠수함에서 눈을 떼면 잠항을 계속할 수 없어요
         </p>
         {departurePort && arrivalPort && (
           <p className="text-sm text-blue-300/40">
-            {departurePort.nameKo} → {arrivalPort.nameKo} 항해 실패
+            {departurePort.nameKo} → {arrivalPort.nameKo} 잠항 실패
           </p>
         )}
         <p className="text-sm text-blue-200/50">
-          다음엔 끝까지 함께 항해해요!
+          다음엔 끝까지 함께 잠항해요!
         </p>
       </div>
 
@@ -100,7 +100,7 @@ export default function FailPage() {
                    hover:from-blue-400 hover:to-cyan-400 transition-all
                    focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900"
       >
-        다시 항해하기
+        다시 잠항하기
       </button>
     </div>
   );

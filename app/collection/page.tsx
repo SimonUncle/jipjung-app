@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-// /collection → /stats (항해기록 탭)으로 리다이렉트
+// /collection → /stats (잠항기록 탭)으로 리다이렉트
 export default function CollectionPage() {
   const router = useRouter();
 

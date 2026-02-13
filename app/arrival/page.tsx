@@ -245,9 +245,9 @@ export default function ArrivalPage() {
           )}
         </div>
 
-        {/* 항해 요약 */}
+        {/* 잠항 요약 */}
         <div className="mt-8 bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 w-full max-w-sm">
-          <h3 className="text-center text-sm text-blue-300/80 mb-3">항해 요약</h3>
+          <h3 className="text-center text-sm text-blue-300/80 mb-3">잠항 요약</h3>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-xs text-blue-200/60">출발</p>
@@ -288,7 +288,7 @@ export default function ArrivalPage() {
                   로그인하면 기록이 저장됩니다!
                 </p>
                 <p className="text-xs text-blue-300/60 mb-3">
-                  통계, 업적, 항해 기록을 안전하게 보관하세요
+                  통계, 업적, 잠항 기록을 안전하게 보관하세요
                 </p>
                 <button
                   onClick={() => setShowLoginModal(true)}
@@ -309,7 +309,7 @@ export default function ArrivalPage() {
           className="w-full py-4 rounded-2xl font-bold text-lg transition-all
             bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30 hover:from-blue-400 hover:to-cyan-400"
         >
-          바로 새 항해 시작 🚢
+          바로 새 잠항 시작 🤿
         </button>
 
         <div className="flex gap-3">

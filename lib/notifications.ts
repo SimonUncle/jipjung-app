@@ -43,10 +43,10 @@ export function sendNotification(
   }
 }
 
-// 항해 완료 알림
+// 잠항 완료 알림
 export function notifyVoyageComplete(portName: string): Notification | null {
-  return sendNotification("항해 완료!", {
-    body: `${portName}에 도착했습니다! 🚢`,
+  return sendNotification("잠항 완료!", {
+    body: `${portName}에 도착했습니다! 🤿`,
     tag: "voyage-complete",
   });
 }
@@ -65,7 +65,7 @@ export function notifyAchievement(
 // 항구 해금 알림
 export function notifyPortUnlock(portName: string): Notification | null {
   return sendNotification("새 항구 해금!", {
-    body: `${portName}으로 항해할 수 있습니다! 🔓`,
+    body: `${portName}으로 잠항할 수 있습니다! 🔓`,
     tag: "port-unlock",
   });
 }

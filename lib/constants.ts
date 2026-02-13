@@ -1,4 +1,4 @@
-import { Checkpoint, Gear, TimerDuration, VoyageTicket, DailyFocusRecord } from "@/types";
+import { TimerDuration, VoyageTicket, DailyFocusRecord } from "@/types";
 
 // 타이머 옵션 (0.33 = 20초 테스트용)
 export const TIMER_DURATIONS: TimerDuration[] = [0.33, 1, 10, 30, 60];
@@ -6,30 +6,7 @@ export const TIMER_DURATIONS: TimerDuration[] = [0.33, 1, 10, 30, 60];
 // 휴식 시간 (분)
 export const REST_DURATION_MINUTES = 10;
 
-// 체크포인트 (진행률 기준) - 100%만 표시
-export const CHECKPOINTS: Checkpoint[] = [
-  { percent: 100, label: "탐험 완료!", emoji: "🎉" },
-];
-
-// 해금 가능한 장비
-export const GEARS: Gear[] = [
-  {
-    id: "boots",
-    name: "탐험 신발",
-    emoji: "🥾",
-    requiredMinutes: 60,
-    description: "첫 번째 장비! 60분 집중으로 해금",
-  },
-  {
-    id: "backpack",
-    name: "탐험 배낭",
-    emoji: "🎒",
-    requiredMinutes: 180,
-    description: "3시간 누적 집중으로 해금",
-  },
-];
-
-// localStorage 키
+// localStorage 키 (기존 사용자 데이터 호환을 위해 값 유지)
 export const STORAGE_KEY = "climb-focus-data";
 
 // 오늘 날짜 가져오기 (YYYY-MM-DD)

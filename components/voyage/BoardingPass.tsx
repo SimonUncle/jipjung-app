@@ -3,7 +3,8 @@
 import { Port } from "@/lib/ports";
 import { getDistanceBetween } from "@/lib/routes";
 import { StoredFocusPurpose } from "@/stores/voyageStore";
-import { Ship, Anchor } from "lucide-react";
+import { Anchor } from "lucide-react";
+import { SubmarineIcon } from "@/components/submarine/SubmarineIcon";
 
 interface BoardingPassProps {
   departurePort: Port;
@@ -48,15 +49,15 @@ export function BoardingPass({
       <div className="w-full max-w-sm animate-in zoom-in-95 duration-300">
         <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-5 py-4">
+          <div className="bg-gradient-to-r from-slate-800 to-cyan-900 px-5 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-blue-100/70 uppercase tracking-widest">
-                  Boarding Pass
+                <p className="text-[10px] text-cyan-200/70 uppercase tracking-widest">
+                  Dive Pass
                 </p>
-                <p className="text-lg font-bold text-white">승선권</p>
+                <p className="text-lg font-bold text-white">탑승권</p>
               </div>
-              <Ship className="w-8 h-8 text-white/80" />
+              <SubmarineIcon size={32} />
             </div>
           </div>
 
@@ -75,7 +76,7 @@ export function BoardingPass({
               <div className="flex-1 flex items-center justify-center px-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-px bg-gradient-to-r from-transparent to-cyan-400" />
-                  <Ship className="w-5 h-5 text-cyan-400" />
+                  <SubmarineIcon size={20} />
                   <div className="w-8 h-px bg-gradient-to-r from-cyan-400 to-transparent" />
                 </div>
               </div>
@@ -164,8 +165,8 @@ export function BoardingPass({
                        hover:from-blue-400 hover:to-cyan-400 transition-all
                        flex items-center justify-center gap-2"
             >
-              <Anchor className="w-4 h-4" />
-              출항하기
+              <SubmarineIcon size={16} />
+              잠항 개시
             </button>
           </div>
         </div>

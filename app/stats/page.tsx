@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { ClimbFocusData, VoyageTicket } from "@/types";
 import { useAuthContext } from "@/components/auth/AuthProvider";
 import { LoginModal } from "@/components/auth/LoginModal";
 import { WeeklyChart } from "@/components/stats/WeeklyChart";
@@ -10,7 +11,8 @@ import { CategoryChart } from "@/components/stats/CategoryChart";
 import { AchievementGrid } from "@/components/stats/AchievementGrid";
 import { PortUnlockProgress } from "@/components/stats/PortUnlockProgress";
 import { TicketCard } from "@/components/collection/TicketCard";
-import { ArrowLeft, BarChart3, Ship, MapPin, Clock, Flame, Share2, Ticket, Trophy, User, Lock } from "lucide-react";
+import { ArrowLeft, BarChart3, MapPin, Clock, Flame, Share2, Ticket, Trophy, User, Lock } from "lucide-react";
+import { SubmarineIcon } from "@/components/submarine/SubmarineIcon";
 import { shareStats } from "@/lib/shareUtils";
 
 type TabType = "stats" | "history" | "achievements";
@@ -67,7 +69,7 @@ export default function StatsPage() {
           </div>
           <h2 className="text-xl font-bold text-white mb-2">로그인이 필요합니다</h2>
           <p className="text-blue-300/60 text-center mb-8 max-w-xs">
-            항해 기록, 통계, 업적을 확인하려면 로그인하세요.
+            잠항 기록, 통계, 업적을 확인하려면 로그인하세요.
             로그인하면 모든 기록이 안전하게 저장됩니다.
           </p>
 
@@ -94,12 +96,12 @@ export default function StatsPage() {
           {/* 게스트 기능 안내 */}
           <div className="mt-12 bg-white/5 rounded-xl p-4 border border-white/10 max-w-xs">
             <p className="text-xs text-blue-300/60 text-center mb-3">
-              게스트로도 항해는 가능해요!
+              게스트로도 잠항은 가능해요!
             </p>
             <div className="flex justify-center gap-4 text-center">
               <div>
-                <Ship className="w-6 h-6 text-cyan-400 mx-auto mb-1" />
-                <p className="text-xs text-white/60">항해하기</p>
+                <SubmarineIcon size={24} className="text-cyan-400 mx-auto mb-1" />
+                <p className="text-xs text-white/60">잠항하기</p>
               </div>
               <div className="text-white/20">→</div>
               <div>
@@ -158,7 +160,7 @@ export default function StatsPage() {
             active={activeTab === "history"}
             onClick={() => setActiveTab("history")}
             icon={<Ticket className="w-4 h-4" />}
-            label="항해기록"
+            label="잠항기록"
             badge={tickets.length > 0 ? tickets.length : undefined}
           />
           <TabButton
@@ -224,7 +226,7 @@ function TabButton({ active, onClick, icon, label, badge }: TabButtonProps) {
 
 // 통계 탭
 interface StatsTabProps {
-  data: any;
+  data: ClimbFocusData;
   totalHours: number;
   totalMinutes: number;
 }
@@ -235,8 +237,8 @@ function StatsTab({ data, totalHours, totalMinutes }: StatsTabProps) {
       {/* 주요 통계 */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard
-          icon={<Ship className="w-5 h-5" />}
-          label="총 항해"
+          icon={<SubmarineIcon size={20} />}
+          label="총 잠항"
           value={data.stats?.completedSessions || 0}
           unit="회"
           color="cyan"
@@ -268,7 +270,7 @@ function StatsTab({ data, totalHours, totalMinutes }: StatsTabProps) {
       <WeeklyChart weeklyFocus={data.weeklyFocus || []} />
 
       {/* 카테고리별 통계 */}
-      <CategoryChart tickets={data.voyageTickets || []} />
+      <CategoryChart tickets={data.voyageHistory || []} />
 
       {/* 추가 통계 */}
       <div className="bg-black/20 rounded-xl p-4">
@@ -279,7 +281,7 @@ function StatsTab({ data, totalHours, totalMinutes }: StatsTabProps) {
             <span className="text-white">{data.streak?.currentStreak || 0}일</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/60">실패한 항해</span>
+            <span className="text-white/60">실패한 잠항</span>
             <span className="text-white">{data.stats?.failedSessions || 0}회</span>
           </div>
           <div className="flex justify-between">
@@ -299,25 +301,25 @@ function StatsTab({ data, totalHours, totalMinutes }: StatsTabProps) {
   );
 }
 
-// 항해기록 탭
+// 잠항기록 탭
 interface HistoryTabProps {
-  tickets: any[];
-  router: any;
+  tickets: VoyageTicket[];
+  router: ReturnType<typeof useRouter>;
 }
 
 function HistoryTab({ tickets, router }: HistoryTabProps) {
   if (tickets.length === 0) {
     return (
       <div className="text-center py-16">
-        <Ship className="w-16 h-16 text-white/20 mx-auto mb-4" />
-        <p className="text-white/50 mb-2">아직 항해 기록이 없습니다</p>
-        <p className="text-white/30 text-sm">첫 항해를 시작해보세요!</p>
+        <SubmarineIcon size={64} className="text-white/20 mx-auto mb-4" />
+        <p className="text-white/50 mb-2">아직 잠항 기록이 없습니다</p>
+        <p className="text-white/30 text-sm">첫 잠항을 시작해보세요!</p>
         <button
           onClick={() => router.push("/")}
           className="mt-6 px-6 py-2 bg-cyan-500 text-white rounded-full font-medium
                    hover:bg-cyan-400 transition-colors"
         >
-          항해 시작하기
+          잠항 시작하기
         </button>
       </div>
     );
@@ -334,7 +336,7 @@ function HistoryTab({ tickets, router }: HistoryTabProps) {
 
 // 업적 탭
 interface AchievementsTabProps {
-  data: any;
+  data: ClimbFocusData;
 }
 
 function AchievementsTab({ data }: AchievementsTabProps) {

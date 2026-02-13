@@ -37,7 +37,7 @@ export function FocusPurposeModal({
           무엇에 집중하시겠어요?
         </h2>
         <p className="text-sm text-slate-400 mt-1">
-          항해 목적을 선택해주세요
+          잠항 목적을 선택해주세요
         </p>
       </Modal.Header>
 

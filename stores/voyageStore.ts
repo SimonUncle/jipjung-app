@@ -1,4 +1,4 @@
-// 항해 세션 관리 Store (핵심 항해 로직만 담당)
+// 잠항 세션 관리 Store (핵심 잠항 로직만 담당)
 
 import { create } from "zustand";
 import { Port } from "@/lib/ports";
@@ -21,7 +21,7 @@ interface VoyageState {
   departurePort: Port | null;
   arrivalPort: Port | null;
 
-  // 항해 정보
+  // 잠항 정보
   selectedDuration: number; // 분
   restDuration: number; // 휴식 시간 (분)
   elapsedSeconds: number;
@@ -151,7 +151,7 @@ export const useVoyageStore = create<VoyageState>((set, get) => ({
     set({ mapZoom: Math.max(1, mapZoom - 1) });
   },
 
-  // 항해 시작
+  // 잠항 시작
   startVoyage: () => {
     const { departurePort, arrivalPort } = get();
     if (!departurePort || !arrivalPort) return;
@@ -225,7 +225,7 @@ export const useVoyageStore = create<VoyageState>((set, get) => ({
     set({ viewMode: mode });
   },
 
-  // 항해 완료
+  // 잠항 완료
   completeVoyage: (onVisit?: (portId: string) => void) => {
     const { arrivalPort } = get();
 
@@ -235,7 +235,7 @@ export const useVoyageStore = create<VoyageState>((set, get) => ({
     set({ status: "completed" });
   },
 
-  // 항해 실패 (탭 이탈 등)
+  // 잠항 실패 (탭 이탈 등)
   failVoyage: () => {
     set({ status: "failed" });
   },
@@ -295,11 +295,11 @@ export function getRemainingDistance(state: VoyageState): number {
 // 집중 시간에 따른 기본 휴식 시간 계산
 export function calculateDefaultRestDuration(focusMinutes: number): number {
   if (focusMinutes < 30) {
-    return 5; // 짧은 항해: 5분 휴식
+    return 5; // 짧은 잠항: 5분 휴식
   } else if (focusMinutes <= 60) {
-    return 10; // 중간 항해: 10분 휴식
+    return 10; // 중간 잠항: 10분 휴식
   } else {
-    return 15; // 긴 항해: 15분 휴식
+    return 15; // 긴 잠항: 15분 휴식
   }
 }
 

@@ -90,7 +90,7 @@ export function useLocalStorage() {
     setData(updated);
   }, []);
 
-  // 항해 티켓 추가
+  // 잠항 티켓 추가
   const addVoyageTicket = useCallback((ticket: VoyageTicket) => {
     const updated = storageAddVoyageTicket(ticket);
     setData(updated);

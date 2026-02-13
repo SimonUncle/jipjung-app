@@ -1,36 +1,143 @@
-// 바다 경로 시스템 - searoute-js 기반 (육지 피해 실제 해상 경로)
+// 바다 경로 시스템 - 사전 계산된 경로 + 베지어 폴백
 
 import { Port } from "./ports";
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
-const searoute: any = require("searoute-js");
+import { findLandCrossings } from "./landmask";
+import {
+  sampleQuadraticBezier,
+  midpoint,
+  createControlPoint
+} from "./bezier";
 
 interface Coordinate {
   lat: number;
   lng: number;
 }
 
-// GeoJSON Point 생성
-function createGeoJSONPoint(coord: Coordinate) {
-  return {
-    type: "Feature" as const,
-    properties: {},
-    geometry: {
-      type: "Point" as const,
-      coordinates: [coord.lng, coord.lat] as [number, number], // GeoJSON은 [lng, lat] 순서
-    },
-  };
-}
-
 // 경로 캐시
 const routeCache: Map<string, Coordinate[]> = new Map();
+
+// 사전 계산된 경로 데이터
+let precomputedRoutes: Record<string, Coordinate[]> | null = null;
+let loadingPromise: Promise<Record<string, Coordinate[]>> | null = null;
+
+// 사전 계산된 경로 로드
+async function loadPrecomputedRoutes(): Promise<Record<string, Coordinate[]>> {
+  if (precomputedRoutes) return precomputedRoutes;
+
+  // 이미 로딩 중이면 기다림
+  if (loadingPromise) return loadingPromise;
+
+  loadingPromise = (async () => {
+    try {
+      const res = await fetch('/data/sea-routes.json');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      precomputedRoutes = await res.json();
+      return precomputedRoutes!;
+    } catch (error) {
+      console.warn('Failed to load precomputed routes:', error);
+      precomputedRoutes = {};
+      return precomputedRoutes;
+    } finally {
+      loadingPromise = null;
+    }
+  })();
+
+  return loadingPromise;
+}
 
 // 캐시 키 생성
 function getCacheKey(fromId: string, toId: string): string {
   return `${fromId}->${toId}`;
 }
 
-// 두 항구 사이 바다 경로 가져오기 (searoute-js 사용)
+// 바다 방향 추정 (출발/도착 기준)
+function estimateSeaDirection(from: Coordinate, to: Coordinate): { lat: number; lng: number } {
+  // 동아시아 지역: 대부분 남쪽이 바다
+  const midLat = (from.lat + to.lat) / 2;
+  const midLng = (from.lng + to.lng) / 2;
+
+  // 일본 근처면 남쪽으로
+  if (midLng > 128 && midLng < 145 && midLat > 30 && midLat < 45) {
+    return { lat: -1, lng: 0 }; // 남쪽
+  }
+
+  // 한국-중국 사이면 남서쪽으로
+  if (midLng > 118 && midLng < 130 && midLat > 30 && midLat < 40) {
+    return { lat: -1, lng: -0.5 }; // 남서쪽
+  }
+
+  // 기본: 남쪽
+  return { lat: -1, lng: 0 };
+}
+
+// 베지어 곡선으로 경로 생성 (육지 회피)
+function createBezierRoute(
+  from: Coordinate,
+  to: Coordinate,
+  maxAttempts: number = 5
+): Coordinate[] {
+  const samples = 30; // 샘플링 포인트 수
+  let offsetMagnitude = 3; // 초기 오프셋 (도 단위)
+
+  // 바다 방향 추정
+  const seaDir = estimateSeaDirection(from, to);
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // 컨트롤 포인트 생성 (바다 방향으로 오프셋)
+    const control = createControlPoint(from, to, seaDir, offsetMagnitude);
+
+    // 베지어 곡선 샘플링
+    const path = sampleQuadraticBezier(from, control, to, samples);
+
+    // 육지 체크
+    const crossings = findLandCrossings(path);
+
+    if (crossings.length === 0) {
+      // 육지 없음 - 성공!
+      return path;
+    }
+
+    // 육지 발견 - 오프셋 증가
+    offsetMagnitude += 2;
+  }
+
+  // 최대 시도 후에도 실패 - 웨이포인트 추가로 우회
+  return createWaypointRoute(from, to, seaDir);
+}
+
+// 웨이포인트 추가로 우회 경로 생성
+function createWaypointRoute(
+  from: Coordinate,
+  to: Coordinate,
+  seaDir: { lat: number; lng: number }
+): Coordinate[] {
+  // 중간에 바다 쪽 웨이포인트 추가
+  const mid = midpoint(from, to);
+  const waypoint: Coordinate = {
+    lat: mid.lat + seaDir.lat * 8, // 큰 오프셋
+    lng: mid.lng + seaDir.lng * 4,
+  };
+
+  // 두 구간 각각 베지어로
+  const firstHalf = createSimpleBezier(from, waypoint, seaDir, 2);
+  const secondHalf = createSimpleBezier(waypoint, to, seaDir, 2);
+
+  // 중복 제거하고 합치기
+  return [...firstHalf.slice(0, -1), ...secondHalf];
+}
+
+// 간단한 베지어 (재귀 방지용)
+function createSimpleBezier(
+  from: Coordinate,
+  to: Coordinate,
+  seaDir: { lat: number; lng: number },
+  offset: number
+): Coordinate[] {
+  const control = createControlPoint(from, to, seaDir, offset);
+  return sampleQuadraticBezier(from, control, to, 15);
+}
+
+// 두 항구 사이 바다 경로 가져오기
 export async function getSeaRoute(from: Port, to: Port): Promise<Coordinate[]> {
   const cacheKey = getCacheKey(from.id, to.id);
 
@@ -47,33 +154,27 @@ export async function getSeaRoute(from: Port, to: Port): Promise<Coordinate[]> {
     return reversed;
   }
 
-  try {
-    // GeoJSON Point 생성
-    const origin = createGeoJSONPoint(from.coordinates);
-    const destination = createGeoJSONPoint(to.coordinates);
+  // 사전 계산된 경로 확인
+  const routes = await loadPrecomputedRoutes();
 
-    // searoute-js로 경로 계산
-    const result = searoute(origin, destination, "km");
-
-    if (result && result.geometry && result.geometry.coordinates) {
-      // GeoJSON [lng, lat] → { lat, lng } 변환
-      const route: Coordinate[] = result.geometry.coordinates.map(
-        ([lng, lat]: [number, number]) => ({ lat, lng })
-      );
-
-      // 캐시에 저장
-      routeCache.set(cacheKey, route);
-
-      return route;
-    }
-  } catch (error) {
-    console.warn("Sea route calculation failed, using direct route:", error);
+  if (routes[cacheKey]) {
+    routeCache.set(cacheKey, routes[cacheKey]);
+    return routes[cacheKey];
   }
 
-  // 실패 시 직선 경로 fallback
-  const directRoute = [from.coordinates, to.coordinates];
-  routeCache.set(cacheKey, directRoute);
-  return directRoute;
+  // 역방향 사전 계산 경로 확인
+  if (routes[reverseCacheKey]) {
+    const reversed = [...routes[reverseCacheKey]].reverse();
+    routeCache.set(cacheKey, reversed);
+    return reversed;
+  }
+
+  // 폴백: 베지어 곡선으로 경로 생성
+  console.warn(`No precomputed route for ${cacheKey}, using bezier fallback`);
+  const route = createBezierRoute(from.coordinates, to.coordinates);
+  routeCache.set(cacheKey, route);
+
+  return route;
 }
 
 // 동기 버전 (데이터 로드 후 사용)
@@ -84,8 +185,31 @@ export function getSeaRouteSync(from: Port, to: Port): Coordinate[] {
     return routeCache.get(cacheKey)!;
   }
 
-  // 캐시 없으면 직선 반환 (fallback)
-  return [from.coordinates, to.coordinates];
+  // 역방향 캐시 확인
+  const reverseCacheKey = getCacheKey(to.id, from.id);
+  if (routeCache.has(reverseCacheKey)) {
+    const reversed = [...routeCache.get(reverseCacheKey)!].reverse();
+    routeCache.set(cacheKey, reversed);
+    return reversed;
+  }
+
+  // 사전 계산된 경로 확인 (이미 로드된 경우만)
+  if (precomputedRoutes) {
+    if (precomputedRoutes[cacheKey]) {
+      routeCache.set(cacheKey, precomputedRoutes[cacheKey]);
+      return precomputedRoutes[cacheKey];
+    }
+    if (precomputedRoutes[reverseCacheKey]) {
+      const reversed = [...precomputedRoutes[reverseCacheKey]].reverse();
+      routeCache.set(cacheKey, reversed);
+      return reversed;
+    }
+  }
+
+  // 캐시 없으면 베지어 경로 생성
+  const route = createBezierRoute(from.coordinates, to.coordinates);
+  routeCache.set(cacheKey, route);
+  return route;
 }
 
 // 경로를 따라 보간

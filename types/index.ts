@@ -1,11 +1,3 @@
-// 세션 상태
-export type SessionStatus =
-  | "idle"
-  | "climbing"
-  | "resting"
-  | "failed"
-  | "completed";
-
 // 타이머 옵션 (분 단위, 0.33 = 20초 테스트용)
 export const TIMER_DURATIONS = [0.33, 1, 10, 30, 60] as const;
 export type TimerDuration = (typeof TIMER_DURATIONS)[number];
@@ -18,23 +10,7 @@ export type CabinType = (typeof CABIN_TYPES)[number];
 export const TIME_MODES = ["voyage", "realtime", "manual"] as const;
 export type TimeMode = (typeof TIME_MODES)[number];
 
-// 체크포인트 정보
-export interface Checkpoint {
-  percent: number; // 진행률 (0-100)
-  label: string;
-  emoji: string;
-}
-
-// 장비 (해금 아이템)
-export interface Gear {
-  id: string;
-  name: string;
-  emoji: string;
-  requiredMinutes: number;
-  description: string;
-}
-
-// 항해 티켓 (컬렉션용)
+// 잠항 티켓 (컬렉션용)
 export interface VoyageTicket {
   id: string;
   date: string; // ISO date string
@@ -109,7 +85,7 @@ export interface ClimbFocusData {
     dailyMinutes: number;
     weeklyMinutes: number;
   };
-  // 항해 기록
+  // 잠항 기록
   voyageHistory: VoyageTicket[];
   // 주간 집중 기록
   weeklyFocus: DailyFocusRecord[];
@@ -118,22 +94,3 @@ export interface ClimbFocusData {
   lastActivity: string;
 }
 
-// 세션 스토어 상태
-export interface SessionState {
-  status: SessionStatus;
-  selectedDuration: TimerDuration;
-  remaining: number; // 남은 시간 (초)
-  startedAt: number | null;
-  passedCheckpoints: number[];
-  isPaused: boolean; // 일시정지 상태
-  pauseUsed: boolean; // 일시정지 사용 여부 (1회 제한)
-
-  // 액션
-  startSession: (duration: TimerDuration) => void;
-  tick: () => void;
-  failSession: () => void;
-  completeSession: () => void;
-  startRest: (customMinutes?: number) => void;
-  resetSession: () => void;
-  togglePause: () => void; // 일시정지 토글
-}

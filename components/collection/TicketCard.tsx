@@ -2,7 +2,8 @@
 
 import { VoyageTicket } from "@/types";
 import { getPortById } from "@/lib/ports";
-import { Ship, Clock, MapPin } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
+import { SubmarineIcon } from "@/components/submarine/SubmarineIcon";
 
 interface TicketCardProps {
   ticket: VoyageTicket;
@@ -40,7 +41,7 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
       {/* 헤더: 날짜 */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-white/50">{dateStr}</span>
-        <Ship className="w-4 h-4 text-cyan-400" />
+        <SubmarineIcon size={16} className="text-cyan-400" />
       </div>
 
       {/* 항로 */}

@@ -15,7 +15,8 @@ import { getSeaRoute } from "@/lib/seaRoutes";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { formatMinutes } from "@/hooks/useTimer";
 import { FocusPurpose } from "@/lib/focusPurposes";
-import { Ship, Anchor, BarChart3, Clock, Settings, User, LogOut } from "lucide-react";
+import { Anchor, BarChart3, Clock, Settings, User, LogOut } from "lucide-react";
+import { SubmarineIcon } from "@/components/submarine/SubmarineIcon";
 import { useAuthContext } from "@/components/auth/AuthProvider";
 import { LoginModal } from "@/components/auth/LoginModal";
 import { StreakBadge } from "@/components/home/StreakBadge";
@@ -144,7 +145,7 @@ export default function HomePage() {
     setBookingStep("cabin");
   };
 
-  // 퀵스타트 핸들러 (마지막 항해 설정으로 바로 출항)
+  // 퀵스타트 핸들러 (마지막 잠항 설정으로 바로 출항)
   const handleQuickStart = async () => {
     const lastVoyage = data.voyageHistory?.[data.voyageHistory.length - 1];
     if (!lastVoyage || !departurePort) return;
@@ -213,10 +214,10 @@ export default function HomePage() {
         {/* 타이틀 */}
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
-            <Ship className="w-7 h-7 text-cyan-400" />
+            <SubmarineIcon size={28} className="text-cyan-400" />
             <h1 className="text-3xl font-bold">
               <span className="text-white">Focus</span>
-              <span className="text-cyan-400"> Voyage</span>
+              <span className="text-cyan-400"> Submarine</span>
             </h1>
           </div>
           {/* 스트릭 배지 */}
@@ -259,7 +260,7 @@ export default function HomePage() {
           onSelect={setBookingDestinationPort}
         />
 
-        {/* 항해 정보 - 거리 & 시간 */}
+        {/* 잠항 정보 - 거리 & 시간 */}
         {destinationPort && (
           <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
             <div className="flex justify-between items-center mb-4">
@@ -268,7 +269,7 @@ export default function HomePage() {
                   <Anchor className="w-5 h-5 text-cyan-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-blue-300/60">항해 거리</p>
+                  <p className="text-xs text-blue-300/60">잠항 거리</p>
                   <p className="text-lg font-semibold text-white">
                     {distance.toLocaleString()} km
                   </p>
@@ -335,7 +336,7 @@ export default function HomePage() {
 
       {/* Quick Start & Book button */}
       <div className="px-4 sm:px-6 pb-2 space-y-3">
-        {/* 퀵스타트 버튼 (이전 항해가 있을 때만 표시) */}
+        {/* 퀵스타트 버튼 (이전 잠항이 있을 때만 표시) */}
         {lastDestination && (
           <QuickStart
             lastDestination={lastDestination}
@@ -354,8 +355,8 @@ export default function HomePage() {
                 : "bg-white/10 text-white/30 cursor-not-allowed"
             }`}
         >
-          <Ship className="w-5 h-5" />
-          {destinationPort ? "승선권 발권" : "목적지를 선택하세요"}
+          <SubmarineIcon size={20} />
+          {destinationPort ? "탑승권 발권" : "목적지를 선택하세요"}
         </button>
       </div>
 
@@ -371,7 +372,7 @@ export default function HomePage() {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-blue-300/60 mb-1">항해 완료</p>
+                <p className="text-xs text-blue-300/60 mb-1">잠항 완료</p>
                 <p className="font-semibold text-white">
                   {data.stats.completedSessions}회
                 </p>

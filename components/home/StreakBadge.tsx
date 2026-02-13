@@ -24,7 +24,7 @@ export function StreakBadge({ currentStreak }: StreakBadgeProps) {
     return (
       <div className="text-center py-2">
         <p className="text-blue-200/60 text-sm">
-          오늘 첫 항해를 시작하세요!
+          오늘 첫 잠항을 시작하세요!
         </p>
       </div>
     );

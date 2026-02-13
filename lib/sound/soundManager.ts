@@ -1,35 +1,25 @@
 "use client";
 
 import {
-  createWindSound,
-  createFootstepsSound,
-  createBirdSound,
-  createCampfireSound,
-  createAmbientMusic,
   createOceanWavesSound,
   createSeagullSound,
-  createShipEngineSound,
+  createSubmarineEngineSound,
   createWaterFlowSound,
   playCheckpointSound,
   playCompleteSound,
   playFailSound,
-  playShipHornSound,
+  playDiveHornSound,
   resumeAudioContext,
 } from "./soundGenerator";
 
 export type SoundType =
-  | "wind"
-  | "footsteps"
-  | "birds"
-  | "campfire"
-  | "restMusic"
   | "checkpoint"
   | "complete"
   | "fail"
   | "oceanWaves"
   | "seagulls"
-  | "shipEngine"
-  | "shipHorn"
+  | "submarineEngine"
+  | "diveHorn"
   | "waterFlow";
 
 interface SoundController {
@@ -37,6 +27,9 @@ interface SoundController {
   stop: () => void;
   setVolume?: (v: number) => void;
 }
+
+// 이벤트 효과음 비활성화 — 시각 효과만 유지
+const EVENT_SOUND_MAP: Record<string, () => void> = {};
 
 class SoundManager {
   private sounds: Map<string, SoundController> = new Map();
@@ -46,17 +39,9 @@ class SoundManager {
   init() {
     if (this.initialized || typeof window === "undefined") return;
 
-    // Web Audio API 기반 사운드 생성
-    this.sounds.set("wind", createWindSound());
-    this.sounds.set("footsteps", createFootstepsSound());
-    this.sounds.set("birds", createBirdSound());
-    this.sounds.set("campfire", createCampfireSound());
-    this.sounds.set("restMusic", createAmbientMusic());
-
-    // 항해 사운드
     this.sounds.set("oceanWaves", createOceanWavesSound());
     this.sounds.set("seagulls", createSeagullSound());
-    this.sounds.set("shipEngine", createShipEngineSound());
+    this.sounds.set("submarineEngine", createSubmarineEngineSound());
     this.sounds.set("waterFlow", createWaterFlowSound());
 
     this.initialized = true;
@@ -74,22 +59,10 @@ class SoundManager {
     this.ensureInit();
 
     // 원샷 사운드
-    if (type === "checkpoint") {
-      playCheckpointSound();
-      return;
-    }
-    if (type === "complete") {
-      playCompleteSound();
-      return;
-    }
-    if (type === "fail") {
-      playFailSound();
-      return;
-    }
-    if (type === "shipHorn") {
-      playShipHornSound();
-      return;
-    }
+    if (type === "checkpoint") { playCheckpointSound(); return; }
+    if (type === "complete") { playCompleteSound(); return; }
+    if (type === "fail") { playFailSound(); return; }
+    if (type === "diveHorn") { playDiveHornSound(); return; }
 
     // 루프 사운드
     const sound = this.sounds.get(type);
@@ -106,7 +79,6 @@ class SoundManager {
   }
 
   fadeIn(type: SoundType, duration?: number) {
-    // Web Audio API는 자동으로 부드럽게 시작
     this.play(type);
   }
 
@@ -131,68 +103,62 @@ class SoundManager {
     return this.enabled;
   }
 
-  // 탐험 사운드 (바람 + 발소리 + 새소리)
-  playClimbingSounds() {
+  // 해저 사운드 (엔진 + 물 흐름)
+  playUnderwaterSounds() {
     if (!this.enabled) return;
     this.ensureInit();
 
-    const wind = this.sounds.get("wind");
-    const footsteps = this.sounds.get("footsteps");
-    const birds = this.sounds.get("birds");
-
-    wind?.start();
-    setTimeout(() => footsteps?.start(), 500);
-    setTimeout(() => birds?.start(), 1000);
-  }
-
-  stopClimbingSounds() {
-    this.sounds.get("wind")?.stop();
-    this.sounds.get("footsteps")?.stop();
-    this.sounds.get("birds")?.stop();
-  }
-
-  // 휴식 사운드 (캠프파이어 + 음악)
-  playRestSounds() {
-    if (!this.enabled) return;
-    this.ensureInit();
-
-    const campfire = this.sounds.get("campfire");
-    const music = this.sounds.get("restMusic");
-
-    campfire?.start();
-    setTimeout(() => music?.start(), 1000);
-  }
-
-  stopRestSounds() {
-    this.sounds.get("campfire")?.stop();
-    this.sounds.get("restMusic")?.stop();
-  }
-
-  // 항해 사운드 (파도 + 엔진 + 물결)
-  playVoyageSounds() {
-    if (!this.enabled) return;
-    this.ensureInit();
-
-    const waves = this.sounds.get("oceanWaves");
-    const engine = this.sounds.get("shipEngine");
+    const engine = this.sounds.get("submarineEngine");
     const waterFlow = this.sounds.get("waterFlow");
 
-    waves?.start();
     waterFlow?.start();
     setTimeout(() => engine?.start(), 500);
   }
 
-  stopVoyageSounds() {
-    this.sounds.get("oceanWaves")?.stop();
-    this.sounds.get("shipEngine")?.stop();
+  stopUnderwaterSounds() {
+    this.sounds.get("submarineEngine")?.stop();
     this.sounds.get("waterFlow")?.stop();
   }
 
-  // 배 경적 (출항/입항)
-  playShipHorn() {
+  // 수면 사운드 (파도)
+  playSurfaceSounds() {
     if (!this.enabled) return;
     this.ensureInit();
-    playShipHornSound();
+
+    const waves = this.sounds.get("oceanWaves");
+    waves?.start();
+  }
+
+  stopSurfaceSounds() {
+    this.sounds.get("oceanWaves")?.stop();
+  }
+
+  // 기존 호환: 잠항 사운드 (해저 소리만)
+  playVoyageSounds() {
+    this.playUnderwaterSounds();
+  }
+
+  stopVoyageSounds() {
+    this.stopUnderwaterSounds();
+    this.stopSurfaceSounds();
+  }
+
+  // 잠항 호른
+  playDiveHorn() {
+    if (!this.enabled) return;
+    this.ensureInit();
+    playDiveHornSound();
+  }
+
+  // 이벤트 효과음
+  playEventSound(eventType: string) {
+    if (!this.enabled) return;
+    this.ensureInit();
+
+    const playFn = EVENT_SOUND_MAP[eventType];
+    if (playFn) {
+      playFn();
+    }
   }
 }
 

@@ -31,21 +31,21 @@ export async function shareVoyage(options: ShareVoyageOptions): Promise<boolean>
 
   if (!departurePort || !arrivalPort) return false;
 
-  const title = `FocusVoyage - ${departurePort.nameKo} → ${arrivalPort.nameKo}`;
+  const title = `Focus Submarine - ${departurePort.nameKo} → ${arrivalPort.nameKo}`;
 
-  let text = `🚢 ${departurePort.countryFlag} ${departurePort.nameKo} → ${arrivalPort.countryFlag} ${arrivalPort.nameKo}\n`;
+  let text = `🤿 ${departurePort.countryFlag} ${departurePort.nameKo} → ${arrivalPort.countryFlag} ${arrivalPort.nameKo}\n`;
   text += `⏱️ ${ticket.duration}분 집중 완료!\n`;
-  text += `📍 ${ticket.distance.toLocaleString()}km 항해\n`;
+  text += `📍 ${ticket.distance.toLocaleString()}km 잠항\n`;
 
   if (ticket.focusPurposeText) {
     text += `🎯 ${ticket.focusPurposeText}\n`;
   }
 
   if (includeStats && totalVoyages && totalFocusMinutes) {
-    text += `\n📊 총 ${totalVoyages}회 항해 | ${Math.floor(totalFocusMinutes / 60)}시간 집중\n`;
+    text += `\n📊 총 ${totalVoyages}회 잠항 | ${Math.floor(totalFocusMinutes / 60)}시간 집중\n`;
   }
 
-  text += "\n#FocusVoyage #집중 #생산성";
+  text += "\n#Focus Submarine #집중 #생산성";
 
   if (!canShare()) {
     // Fallback: 클립보드에 복사
@@ -88,12 +88,12 @@ export async function shareStats(
   const hours = Math.floor(totalFocusMinutes / 60);
   const minutes = totalFocusMinutes % 60;
 
-  let text = `🚢 FocusVoyage 통계\n\n`;
-  text += `📊 총 항해: ${totalVoyages}회\n`;
+  let text = `🤿 Focus Submarine 통계\n\n`;
+  text += `📊 총 잠항: ${totalVoyages}회\n`;
   text += `⏱️ 총 집중: ${hours}시간 ${minutes}분\n`;
   text += `🌍 방문 항구: ${visitedPorts}곳\n`;
   text += `🔥 최장 연속: ${longestStreak}일\n`;
-  text += "\n#FocusVoyage #집중 #생산성";
+  text += "\n#Focus Submarine #집중 #생산성";
 
   if (!canShare()) {
     try {
@@ -106,7 +106,7 @@ export async function shareStats(
 
   try {
     await navigator.share({
-      title: "FocusVoyage 통계",
+      title: "Focus Submarine 통계",
       text,
     });
     return true;
