@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   title: "Focus Submarine",
   description: "집중하면 잠수함이 목적지를 향해 잠항하는 감성 집중 타이머",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

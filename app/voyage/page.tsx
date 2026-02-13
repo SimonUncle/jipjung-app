@@ -153,7 +153,7 @@ export default function VoyagePage() {
     }
   }, [status, showComplete, selectedDuration, recordComplete, completeVoyage, addVisitedPort, router, play, vibrationEnabled, stopAll, playDiveHorn, arrivalPort]);
 
-  // Tab visibility detection
+  // Tab visibility detection — 3초 유예 시간
   const handleVisibilityHidden = useCallback(() => {
     if (status === "sailing" && !isPaused) {
       stopAll();
@@ -165,9 +165,18 @@ export default function VoyagePage() {
     }
   }, [status, isPaused, failVoyage, recordFail, router, stopAll, play, vibrationEnabled]);
 
-  useVisibility({
+  const handleVisibilityReturn = useCallback(() => {
+    // Returned within grace period — resume sounds
+    if (status === "sailing" && !isPaused) {
+      playUnderwaterSounds();
+    }
+  }, [status, isPaused, playUnderwaterSounds]);
+
+  const { isInGracePeriod, graceRemaining } = useVisibility({
     onHidden: handleVisibilityHidden,
+    onVisible: handleVisibilityReturn,
     enabled: status === "sailing" && !isPaused,
+    gracePeriodMs: 3000,
   });
 
   // Redirect if no session
@@ -439,6 +448,21 @@ export default function VoyagePage() {
               <SubmarineIcon size={24} />
               잠항 재개
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Grace period warning overlay */}
+      {isInGracePeriod && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-red-950/90 backdrop-blur-sm">
+          <div className="text-center space-y-4 px-8">
+            <div className="w-24 h-24 mx-auto bg-red-500/20 rounded-full flex items-center justify-center border-4 border-red-400 animate-pulse">
+              <span className="text-4xl font-bold text-red-400">{graceRemaining}</span>
+            </div>
+            <h2 className="text-2xl font-bold text-white">돌아와주세요!</h2>
+            <p className="text-red-200/80 text-sm">
+              {graceRemaining}초 안에 돌아오지 않으면 잠항이 실패합니다
+            </p>
           </div>
         </div>
       )}

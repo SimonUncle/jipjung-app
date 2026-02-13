@@ -23,6 +23,7 @@ import { StreakBadge } from "@/components/home/StreakBadge";
 import { GoalProgress } from "@/components/home/GoalProgress";
 import { GoalSettingModal } from "@/components/home/GoalSettingModal";
 import { QuickStart } from "@/components/home/QuickStart";
+import { OnboardingModal } from "@/components/home/OnboardingModal";
 
 type BookingStep = "idle" | "purpose" | "cabin" | "confirm";
 
@@ -32,6 +33,19 @@ export default function HomePage() {
   const { user, isAuthenticated, signOut, isLoading: authLoading } = useAuthContext();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // 첫 방문 시 온보딩 표시
+  useEffect(() => {
+    if (isLoaded && !localStorage.getItem("onboarding_done")) {
+      setShowOnboarding(true);
+    }
+  }, [isLoaded]);
+
+  const handleCloseOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem("onboarding_done", "1");
+  };
 
   const {
     selectRoute,
@@ -452,6 +466,11 @@ export default function HomePage() {
         onSave={setGoals}
         onClose={() => setShowGoalModal(false)}
       />
+
+      {/* Onboarding Modal (첫 방문 시) */}
+      {showOnboarding && (
+        <OnboardingModal onClose={handleCloseOnboarding} />
+      )}
     </div>
   );
 }
