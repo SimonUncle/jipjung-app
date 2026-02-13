@@ -7,6 +7,9 @@ import { PeriscopeView } from "@/components/submarine/PeriscopeView";
 import { UnderwaterView } from "@/components/submarine/UnderwaterView";
 import { SubmarineIcon } from "@/components/submarine/SubmarineIcon";
 import { useSubmarineEvents } from "@/hooks/useSubmarineEvents";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { syncUserStats } from "@/lib/supabaseSync";
+import { useAuthContext } from "@/components/auth/AuthProvider";
 
 // Dynamic import for map component (SSR 방지)
 const SubmarineMap = dynamic(
@@ -42,6 +45,8 @@ type ViewMode = "map" | "periscope" | "underwater";
 export default function VoyagePage() {
   const router = useRouter();
   const { recordComplete, recordFail, data } = useLocalStorage();
+  const { user } = useAuthContext();
+  const { track } = useAnalytics();
   const {
     play,
     stopAll,
@@ -161,9 +166,22 @@ export default function VoyagePage() {
       if (vibrationEnabled) vibrateFail();
       recordFail();
       failVoyage();
+
+      // Supabase 동기화 + 이벤트 트래킹
+      track("voyage_fail", {
+        from: departurePort?.id,
+        to: arrivalPort?.id,
+      });
+      if (user?.id) {
+        setTimeout(() => {
+          const freshData = JSON.parse(localStorage.getItem("climb-focus-data") || "{}");
+          if (freshData.stats) syncUserStats(user.id, freshData).catch(() => {});
+        }, 200);
+      }
+
       router.push("/fail");
     }
-  }, [status, isPaused, failVoyage, recordFail, router, stopAll, play, vibrationEnabled]);
+  }, [status, isPaused, failVoyage, recordFail, router, stopAll, play, vibrationEnabled, track, departurePort, arrivalPort, user]);
 
   const handleVisibilityReturn = useCallback(() => {
     // Returned within grace period — resume sounds

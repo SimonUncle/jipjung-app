@@ -10,6 +10,8 @@ import { LoginModal } from "@/components/auth/LoginModal";
 import { VoyageTicket, Achievement } from "@/types";
 import { getNewlyUnlockedAchievements } from "@/lib/achievements";
 import { shareVoyage } from "@/lib/shareUtils";
+import { syncVoyage, syncUserStats } from "@/lib/supabaseSync";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { AchievementUnlock } from "@/components/common/AchievementUnlock";
 import { ShareButton } from "@/components/common/ShareButton";
 import { User } from "lucide-react";
@@ -37,7 +39,8 @@ export default function ArrivalPage() {
     addAchievements,
   } = useLocalStorage();
 
-  const { isAuthenticated } = useAuthContext();
+  const { isAuthenticated, user } = useAuthContext();
+  const { track } = useAnalytics();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showStamp, setShowStamp] = useState(false);
   const [isNewPort, setIsNewPort] = useState(false);
@@ -68,6 +71,22 @@ export default function ArrivalPage() {
         focusPurposeText: focusPurpose?.id === "custom" ? customPurposeText || undefined : focusPurpose?.labelKo,
       };
       addVoyageTicket(ticket);
+
+      // Supabase 동기화 + 이벤트 트래킹 (fire-and-forget)
+      if (user?.id) {
+        syncVoyage(user.id, ticket).catch(() => {});
+        // stats는 addVoyageTicket 후 data가 업데이트되므로 약간 딜레이
+        setTimeout(() => {
+          const freshData = JSON.parse(localStorage.getItem("climb-focus-data") || "{}");
+          if (freshData.stats) syncUserStats(user.id, freshData).catch(() => {});
+        }, 200);
+      }
+      track("voyage_complete", {
+        from: departurePort.id,
+        to: arrivalPort.id,
+        duration: selectedDuration,
+        distance: distance,
+      });
 
       // 방문 항구 추가
       if (!data.visitedPorts?.includes(arrivalPort.id)) {

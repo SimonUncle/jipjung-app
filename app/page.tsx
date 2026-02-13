@@ -24,6 +24,7 @@ import { GoalProgress } from "@/components/home/GoalProgress";
 import { GoalSettingModal } from "@/components/home/GoalSettingModal";
 import { QuickStart } from "@/components/home/QuickStart";
 import { OnboardingModal } from "@/components/home/OnboardingModal";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 type BookingStep = "idle" | "purpose" | "cabin" | "confirm";
 
@@ -31,6 +32,7 @@ export default function HomePage() {
   const router = useRouter();
   const { data, isLoaded, setGoals } = useLocalStorage();
   const { user, isAuthenticated, signOut, isLoading: authLoading } = useAuthContext();
+  const { track } = useAnalytics();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -139,6 +141,13 @@ export default function HomePage() {
     selectRoute(departurePort, destinationPort, selectedDuration, 0);
     setCabinNumber(selectedCabinNumber);
     setFocusPurpose(selectedPurpose, customPurposeText ?? undefined);
+
+    track("voyage_start", {
+      from: departurePort.id,
+      to: destinationPort.id,
+      duration: selectedDuration,
+    });
+
     startVoyage();
     router.push("/voyage");
   };

@@ -33,7 +33,15 @@ export async function middleware(request: NextRequest) {
   });
 
   // 세션 갱신
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // /admin 경로 보호
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    if (!user || user.email !== adminEmail) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
 
   return supabaseResponse;
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { fullSync } from "@/lib/supabaseSync";
 import { User, Session } from "@supabase/supabase-js";
 
 interface AuthState {
@@ -57,6 +58,17 @@ export function useAuth() {
         isAuthenticated: !!session,
         isConfigured: true,
       });
+
+      // 로그인 시 localStorage 데이터를 Supabase에 동기화
+      if (_event === "SIGNED_IN" && session?.user?.id) {
+        try {
+          const raw = localStorage.getItem("climb-focus-data");
+          if (raw) {
+            const data = JSON.parse(raw);
+            fullSync(session.user.id, data).catch(() => {});
+          }
+        } catch {}
+      }
     });
 
     return () => subscription.unsubscribe();

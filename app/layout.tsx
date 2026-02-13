@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 
 export const metadata: Metadata = {
   title: "Focus Submarine",
@@ -36,6 +37,7 @@ export default function RootLayout({
       <body className="bg-dark-bg text-white antialiased">
         <AuthProvider>
           <main className="min-h-screen flex flex-col">{children}</main>
+          <AnalyticsTracker />
         </AuthProvider>
         <Analytics />
       </body>
