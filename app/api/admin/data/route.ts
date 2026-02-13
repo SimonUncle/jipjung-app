@@ -1,0 +1,156 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { createServiceClient } from "@/lib/supabaseServer";
+import { ADMIN_EMAIL } from "@/lib/constants";
+
+export async function GET(request: NextRequest) {
+  // 1. 인증 확인: 쿠키에서 세션 읽어 admin 이메일 체크
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.json({ error: "not configured" }, { status: 503 });
+  }
+
+  const supabaseAuth = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll() {},
+    },
+  });
+
+  const { data: { user } } = await supabaseAuth.auth.getUser();
+  if (!user || user.email !== ADMIN_EMAIL) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 403 });
+  }
+
+  // 2. Service role client (RLS 우회)
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "service client not configured" }, { status: 503 });
+  }
+
+  // 3. 기간 파라미터
+  const days = parseInt(request.nextUrl.searchParams.get("days") || "7", 10);
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceStr = since.toISOString();
+
+  try {
+    // ---- Traffic ----
+    const { data: events } = await supabase
+      .from("analytics_events")
+      .select("session_id, event_data")
+      .eq("event_type", "page_view")
+      .gte("created_at", sinceStr);
+
+    const rows = events || [];
+    const sessionIds = new Set(rows.map((e: { session_id: string }) => e.session_id).filter(Boolean));
+    const pageViews = rows.length;
+
+    const pageCounts: Record<string, number> = {};
+    rows.forEach((e: { event_data: Record<string, string> }) => {
+      const page = e.event_data?.page || "unknown";
+      pageCounts[page] = (pageCounts[page] || 0) + 1;
+    });
+    const pageBreakdown = Object.entries(pageCounts)
+      .map(([page, count]) => ({ page, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const traffic = { visitors: sessionIds.size, pageViews, pageBreakdown };
+
+    // ---- Voyages ----
+    const { data: voyages } = await supabase
+      .from("voyages")
+      .select("departure_port, arrival_port, duration, focus_purpose")
+      .gte("completed_at", sinceStr);
+
+    const completed = voyages?.length || 0;
+
+    const { data: failEvents } = await supabase
+      .from("analytics_events")
+      .select("id")
+      .eq("event_type", "voyage_fail")
+      .gte("created_at", sinceStr);
+
+    const failed = failEvents?.length || 0;
+    const total = completed + failed;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const avgDuration =
+      completed > 0 ? Math.round(voyages!.reduce((sum: number, v: { duration: number }) => sum + v.duration, 0) / completed) : 0;
+
+    const routeCounts: Record<string, number> = {};
+    voyages?.forEach((v: { departure_port: string; arrival_port: string }) => {
+      const key = `${v.departure_port}→${v.arrival_port}`;
+      routeCounts[key] = (routeCounts[key] || 0) + 1;
+    });
+    const popularRoutes = Object.entries(routeCounts)
+      .map(([route, count]) => {
+        const [from, to] = route.split("→");
+        return { from, to, count };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const purposeCounts: Record<string, number> = {};
+    voyages?.forEach((v: { focus_purpose: string | null }) => {
+      if (v.focus_purpose) {
+        purposeCounts[v.focus_purpose] = (purposeCounts[v.focus_purpose] || 0) + 1;
+      }
+    });
+    const popularPurposes = Object.entries(purposeCounts)
+      .map(([purpose, count]) => ({ purpose, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const voyageStats = { completed, failed, completionRate, avgDuration, popularRoutes, popularPurposes };
+
+    // ---- Users ----
+    const { data: users } = await supabase
+      .from("users")
+      .select("id, email, nickname, created_at, last_synced_at")
+      .order("created_at", { ascending: false });
+
+    const userIds = (users || []).map((u: { id: string }) => u.id);
+    const { data: stats } = userIds.length > 0
+      ? await supabase.from("user_stats").select("user_id, total_focus_minutes, completed_sessions, current_streak").in("user_id", userIds)
+      : { data: [] };
+
+    const statsMap = new Map((stats || []).map((s: { user_id: string }) => [s.user_id, s]));
+
+    const userList = (users || []).map((u: { id: string; email: string | null; nickname: string | null; created_at: string; last_synced_at: string | null }) => {
+      const s = statsMap.get(u.id) as { total_focus_minutes?: number; completed_sessions?: number; current_streak?: number } | undefined;
+      return {
+        id: u.id,
+        email: u.email,
+        nickname: u.nickname,
+        created_at: u.created_at,
+        last_synced_at: u.last_synced_at,
+        total_focus_minutes: s?.total_focus_minutes || 0,
+        completed_sessions: s?.completed_sessions || 0,
+        current_streak: s?.current_streak || 0,
+      };
+    });
+
+    // User counts
+    const now = new Date();
+    const todayStr = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const weekStr = new Date(now.getTime() - 7 * 86400000).toISOString();
+    const monthStr = new Date(now.getTime() - 30 * 86400000).toISOString();
+    const all = users || [];
+
+    const userCounts = {
+      total: all.length,
+      today: all.filter((u: { created_at: string }) => u.created_at >= todayStr).length,
+      week: all.filter((u: { created_at: string }) => u.created_at >= weekStr).length,
+      month: all.filter((u: { created_at: string }) => u.created_at >= monthStr).length,
+    };
+
+    return NextResponse.json({ traffic, voyageStats, users: userList, userCounts });
+  } catch (e) {
+    console.error("[admin] data fetch error:", e);
+    return NextResponse.json({ error: "internal" }, { status: 500 });
+  }
+}

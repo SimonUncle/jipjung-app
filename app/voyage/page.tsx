@@ -55,6 +55,8 @@ export default function VoyagePage() {
     playSurfaceSounds,
     stopSurfaceSounds,
     playDiveHorn,
+    crossfadeToSurface,
+    crossfadeToUnderwater,
   } = useSound();
   const soundsStarted = useRef(false);
 
@@ -175,7 +177,7 @@ export default function VoyagePage() {
       if (user?.id) {
         setTimeout(() => {
           const freshData = JSON.parse(localStorage.getItem("climb-focus-data") || "{}");
-          if (freshData.stats) syncUserStats(user.id, freshData).catch(() => {});
+          if (freshData.stats) syncUserStats(user.id, freshData, user.email).catch(() => {});
         }, 200);
       }
 
@@ -209,13 +211,11 @@ export default function VoyagePage() {
     if (vibrationEnabled) vibratePause();
 
     if (!isPaused) {
-      // 잠항 → 부상
-      stopUnderwaterSounds();
-      playSurfaceSounds();
+      // 잠항 → 부상: 상승음 + crossfade
+      crossfadeToSurface();
     } else {
-      // 부상 → 재잠항
-      stopSurfaceSounds();
-      playUnderwaterSounds();
+      // 부상 → 재잠항: 하강음 + crossfade
+      crossfadeToUnderwater();
     }
 
     togglePause();

@@ -87,6 +87,14 @@ export function useSound() {
     soundManager.stopAll();
   }, []);
 
+  const crossfadeToSurface = useCallback(() => {
+    soundManager.crossfadeToSurface();
+  }, []);
+
+  const crossfadeToUnderwater = useCallback(() => {
+    soundManager.crossfadeToUnderwater();
+  }, []);
+
   return {
     play,
     stop,
@@ -101,6 +109,8 @@ export function useSound() {
     playDiveHorn,
     playEventSound,
     stopAll,
+    crossfadeToSurface,
+    crossfadeToUnderwater,
     isEnabled: data.settings.soundEnabled,
   };
 }

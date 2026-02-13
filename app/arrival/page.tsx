@@ -74,11 +74,11 @@ export default function ArrivalPage() {
 
       // Supabase 동기화 + 이벤트 트래킹 (fire-and-forget)
       if (user?.id) {
-        syncVoyage(user.id, ticket).catch(() => {});
+        syncVoyage(user.id, ticket, user.email).catch(() => {});
         // stats는 addVoyageTicket 후 data가 업데이트되므로 약간 딜레이
         setTimeout(() => {
           const freshData = JSON.parse(localStorage.getItem("climb-focus-data") || "{}");
-          if (freshData.stats) syncUserStats(user.id, freshData).catch(() => {});
+          if (freshData.stats) syncUserStats(user.id, freshData, user.email).catch(() => {});
         }, 200);
       }
       track("voyage_complete", {

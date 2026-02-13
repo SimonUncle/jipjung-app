@@ -65,7 +65,7 @@ export function useAuth() {
           const raw = localStorage.getItem("climb-focus-data");
           if (raw) {
             const data = JSON.parse(raw);
-            fullSync(session.user.id, data).catch(() => {});
+            fullSync(session.user.id, data, session.user.email).catch(() => {});
           }
         } catch {}
       }

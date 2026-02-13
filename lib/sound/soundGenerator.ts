@@ -137,16 +137,17 @@ export async function resumeAudioContext() {
 export function createOceanWavesSound(): {
   start: () => void;
   stop: () => void;
+  setVolume: (v: number, rampTime?: number) => void;
 } {
   const ctx = getAudioContext();
-  // 모든 노드를 클로저에 저장 (GC 방지)
   let nodes: AudioNode[] = [];
   let isPlaying = false;
   let waveIntervalId: NodeJS.Timeout | null = null;
+  let mainGainRef: GainNode | null = null;
 
-  // 개별 파도 크래시 이벤트 재생
+  // 개별 파도 크래시 이벤트 재생 — mainGainRef 경유
   const playWaveCrash = () => {
-    if (!isPlaying) return;
+    if (!isPlaying || !mainGainRef) return;
 
     const now = ctx.currentTime;
 
@@ -170,11 +171,11 @@ export function createOceanWavesSound(): {
 
     approachSource.connect(approachLowpass);
     approachLowpass.connect(approachGain);
-    approachGain.connect(ctx.destination);
+    approachGain.connect(mainGainRef);
     approachSource.start(now);
     approachSource.stop(now + 3);
 
-    // 파도 부딪히는 소리 (White noise burst) - 더 긴 버퍼와 부드러운 페이드
+    // 파도 부딪히는 소리 (White noise burst)
     const crashBuffer = createNoiseBuffer(ctx, 2.5);
     const crashSource = ctx.createBufferSource();
     crashSource.buffer = crashBuffer;
@@ -198,11 +199,11 @@ export function createOceanWavesSound(): {
     crashSource.connect(crashHighpass);
     crashHighpass.connect(crashLowpass);
     crashLowpass.connect(crashGain);
-    crashGain.connect(ctx.destination);
+    crashGain.connect(mainGainRef);
     crashSource.start(now + 0.8);
     crashSource.stop(now + 3);
 
-    // 파도 빠지는 소리 (receding) - 부드러운 페이드인/아웃
+    // 파도 빠지는 소리 (receding)
     const recedeBuffer = createBrownNoiseBuffer(ctx, 4);
     const recedeSource = ctx.createBufferSource();
     recedeSource.buffer = recedeBuffer;
@@ -214,17 +215,15 @@ export function createOceanWavesSound(): {
     recedeLowpass.frequency.linearRampToValueAtTime(100, now + 4);
 
     const recedeGain = ctx.createGain();
-    // 부드러운 페이드인
     recedeGain.gain.setValueAtTime(0, now + 1.2);
     recedeGain.gain.linearRampToValueAtTime(0.03, now + 1.5);
     recedeGain.gain.linearRampToValueAtTime(0.04, now + 2.0);
-    // 천천히 페이드아웃
     recedeGain.gain.linearRampToValueAtTime(0.02, now + 3.0);
     recedeGain.gain.exponentialRampToValueAtTime(0.001, now + 4.2);
 
     recedeSource.connect(recedeLowpass);
     recedeLowpass.connect(recedeGain);
-    recedeGain.connect(ctx.destination);
+    recedeGain.connect(mainGainRef);
     recedeSource.start(now + 1.2);
     recedeSource.stop(now + 4.5);
   };
@@ -232,7 +231,6 @@ export function createOceanWavesSound(): {
   // 다음 파도 예약
   const scheduleNextWave = () => {
     if (!isPlaying) return;
-    // 5~12초 랜덤 간격
     const delay = 5000 + Math.random() * 7000;
     waveIntervalId = setTimeout(() => {
       playWaveCrash();
@@ -244,9 +242,10 @@ export function createOceanWavesSound(): {
     if (isPlaying) return;
     isPlaying = true;
 
-    // 메인 게인
+    // 메인 게인 (볼륨 하향: 0.05 → 0.03)
     const mainGain = ctx.createGain();
-    mainGain.gain.value = 0.05;
+    mainGain.gain.value = 0.03;
+    mainGainRef = mainGain;
 
     // 레이어 1: 배경 바다 소리 (브라운 노이즈)
     const waveBuffer = createBrownNoiseBuffer(ctx, 4);
@@ -261,7 +260,6 @@ export function createOceanWavesSound(): {
     const waveGain = ctx.createGain();
     waveGain.gain.value = 0.5;
 
-    // LFO로 미세한 변화
     const waveLfo = ctx.createOscillator();
     const waveLfoGain = ctx.createGain();
     waveLfo.frequency.value = 0.15;
@@ -296,7 +294,6 @@ export function createOceanWavesSound(): {
     waveSource.start();
     ambientSource.start();
 
-    // 모든 노드 참조 유지 (GC 방지 핵심)
     nodes = [mainGain, waveSource, lowpass, waveGain, waveLfo, waveLfoGain, ambientSource, ambientHighpass, ambientGain];
 
     // 첫 파도는 2~4초 후에
@@ -311,6 +308,7 @@ export function createOceanWavesSound(): {
   const stop = () => {
     if (!isPlaying) return;
     isPlaying = false;
+    mainGainRef = null;
 
     nodes.forEach((n) => {
       try { if ('stop' in n && typeof (n as any).stop === 'function') (n as any).stop(); } catch {}
@@ -324,7 +322,18 @@ export function createOceanWavesSound(): {
     }
   };
 
-  return { start, stop };
+  const setVolume = (v: number, rampTime: number = 0) => {
+    if (!mainGainRef) return;
+    mainGainRef.gain.cancelScheduledValues(ctx.currentTime);
+    mainGainRef.gain.setValueAtTime(mainGainRef.gain.value, ctx.currentTime);
+    if (rampTime > 0) {
+      mainGainRef.gain.linearRampToValueAtTime(Math.max(v, 0.0001), ctx.currentTime + rampTime);
+    } else {
+      mainGainRef.gain.setValueAtTime(Math.max(v, 0.0001), ctx.currentTime);
+    }
+  };
+
+  return { start, stop, setVolume };
 }
 
 // 갈매기 소리 생성
@@ -415,21 +424,22 @@ export function createSeagullSound(): {
 export function createSubmarineEngineSound(): {
   start: () => void;
   stop: () => void;
+  setVolume: (v: number, rampTime?: number) => void;
 } {
   const ctx = getAudioContext();
-  // 모든 노드를 클로저에 저장 (GC 방지)
   let nodes: AudioNode[] = [];
   let isPlaying = false;
+  let mainGainRef: GainNode | null = null;
 
   const start = () => {
     if (isPlaying) return;
     isPlaying = true;
 
-    // 메인 게인
     const mainGain = ctx.createGain();
     mainGain.gain.value = 0.07;
+    mainGainRef = mainGain;
 
-    // 레이어 1: 엔진 험 (순음 — 폰 스피커에서 확실히 들림)
+    // 레이어 1: 엔진 험 (순음)
     const hum = ctx.createOscillator();
     hum.type = "sine";
     hum.frequency.value = 200;
@@ -471,13 +481,13 @@ export function createSubmarineEngineSound(): {
 
     mainGain.connect(ctx.destination);
 
-    // 모든 노드 참조 유지 (GC 방지 핵심)
     nodes = [mainGain, hum, humGain, engineSource, bandpass, noiseGain, vibrato, vibratoGain];
   };
 
   const stop = () => {
     if (!isPlaying) return;
     isPlaying = false;
+    mainGainRef = null;
 
     nodes.forEach((n) => {
       try { if ('stop' in n && typeof (n as any).stop === 'function') (n as any).stop(); } catch {}
@@ -486,7 +496,18 @@ export function createSubmarineEngineSound(): {
     nodes = [];
   };
 
-  return { start, stop };
+  const setVolume = (v: number, rampTime: number = 0) => {
+    if (!mainGainRef) return;
+    mainGainRef.gain.cancelScheduledValues(ctx.currentTime);
+    mainGainRef.gain.setValueAtTime(mainGainRef.gain.value, ctx.currentTime);
+    if (rampTime > 0) {
+      mainGainRef.gain.linearRampToValueAtTime(Math.max(v, 0.0001), ctx.currentTime + rampTime);
+    } else {
+      mainGainRef.gain.setValueAtTime(Math.max(v, 0.0001), ctx.currentTime);
+    }
+  };
+
+  return { start, stop, setVolume };
 }
 
 // 잠항 호른 효과음 (원샷) - 부드러운 "부~" 경적
@@ -523,21 +544,22 @@ export function playDiveHornSound() {
 export function createWaterFlowSound(): {
   start: () => void;
   stop: () => void;
+  setVolume: (v: number, rampTime?: number) => void;
 } {
   const ctx = getAudioContext();
-  // 모든 노드를 클로저에 저장 (GC 방지)
   let nodes: AudioNode[] = [];
   let isPlaying = false;
+  let mainGainRef: GainNode | null = null;
 
   const start = () => {
     if (isPlaying) return;
     isPlaying = true;
 
-    // 메인 게인
     const mainGain = ctx.createGain();
     mainGain.gain.value = 0.04;
+    mainGainRef = mainGain;
 
-    // 레이어 1: 물 흐르는 소리 (브라운노이즈 베이스 — 보조)
+    // 레이어 1: 물 흐르는 소리 (브라운노이즈 베이스)
     const flowBuffer = createBrownNoiseBuffer(ctx, 3);
     const flowSource = ctx.createBufferSource();
     flowSource.buffer = flowBuffer;
@@ -555,7 +577,7 @@ export function createWaterFlowSound(): {
     bandpass.connect(flowGain);
     flowGain.connect(mainGain);
 
-    // 레이어 2: 쉬~소리 (화이트노이즈 — 메인, 폰 스피커에서 잘 들림)
+    // 레이어 2: 쉬~소리 (화이트노이즈)
     const shushBuffer = createNoiseBuffer(ctx, 2);
     const shushSource = ctx.createBufferSource();
     shushSource.buffer = shushBuffer;
@@ -577,7 +599,7 @@ export function createWaterFlowSound(): {
     lowpass.connect(shushGain);
     shushGain.connect(mainGain);
 
-    // LFO로 물결 변화 (두 레이어 모두 변조)
+    // LFO로 물결 변화
     const lfo = ctx.createOscillator();
     const lfoGain = ctx.createGain();
     lfo.frequency.value = 0.1;
@@ -591,13 +613,13 @@ export function createWaterFlowSound(): {
     flowSource.start();
     shushSource.start();
 
-    // 모든 노드 참조 유지 (GC 방지 핵심)
     nodes = [mainGain, flowSource, bandpass, flowGain, shushSource, highpass, lowpass, shushGain, lfo, lfoGain];
   };
 
   const stop = () => {
     if (!isPlaying) return;
     isPlaying = false;
+    mainGainRef = null;
 
     nodes.forEach((n) => {
       try { if ('stop' in n && typeof (n as any).stop === 'function') (n as any).stop(); } catch {}
@@ -606,7 +628,148 @@ export function createWaterFlowSound(): {
     nodes = [];
   };
 
-  return { start, stop };
+  const setVolume = (v: number, rampTime: number = 0) => {
+    if (!mainGainRef) return;
+    mainGainRef.gain.cancelScheduledValues(ctx.currentTime);
+    mainGainRef.gain.setValueAtTime(mainGainRef.gain.value, ctx.currentTime);
+    if (rampTime > 0) {
+      mainGainRef.gain.linearRampToValueAtTime(Math.max(v, 0.0001), ctx.currentTime + rampTime);
+    } else {
+      mainGainRef.gain.setValueAtTime(Math.max(v, 0.0001), ctx.currentTime);
+    }
+  };
+
+  return { start, stop, setVolume };
+}
+
+// ============================
+// 전환 효과음 (부상/잠항)
+// ============================
+
+// 부상 효과음 — 상승 톤 + 기포 + 압력 해제
+export function playSurfacingSound() {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  // 상승 톤 (low → high sweep)
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(120, now);
+  osc.frequency.exponentialRampToValueAtTime(400, now + 1.2);
+  osc.frequency.exponentialRampToValueAtTime(600, now + 1.8);
+
+  const oscGain = ctx.createGain();
+  oscGain.gain.setValueAtTime(0, now);
+  oscGain.gain.linearRampToValueAtTime(0.06, now + 0.2);
+  oscGain.gain.setValueAtTime(0.06, now + 1.2);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+  const lowpass = ctx.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.setValueAtTime(300, now);
+  lowpass.frequency.linearRampToValueAtTime(1200, now + 1.8);
+
+  osc.connect(lowpass);
+  lowpass.connect(oscGain);
+  oscGain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 2.0);
+
+  // 기포 버블 (노이즈 버스트 연속)
+  for (let i = 0; i < 5; i++) {
+    const t = now + 0.2 + i * 0.3 + Math.random() * 0.15;
+    const bubbleBuffer = createNoiseBuffer(ctx, 0.3);
+    const bubbleSrc = ctx.createBufferSource();
+    bubbleSrc.buffer = bubbleBuffer;
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 1500 + Math.random() * 1000;
+    bp.Q.value = 3;
+
+    const bGain = ctx.createGain();
+    bGain.gain.setValueAtTime(0, t);
+    bGain.gain.linearRampToValueAtTime(0.03, t + 0.05);
+    bGain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+
+    bubbleSrc.connect(bp);
+    bp.connect(bGain);
+    bGain.connect(ctx.destination);
+    bubbleSrc.start(t);
+    bubbleSrc.stop(t + 0.3);
+  }
+
+  // 압력 해제 쉬~소리
+  const hissBuffer = createNoiseBuffer(ctx, 1.5);
+  const hissSrc = ctx.createBufferSource();
+  hissSrc.buffer = hissBuffer;
+
+  const hissHp = ctx.createBiquadFilter();
+  hissHp.type = "highpass";
+  hissHp.frequency.value = 3000;
+
+  const hissGain = ctx.createGain();
+  hissGain.gain.setValueAtTime(0, now + 0.8);
+  hissGain.gain.linearRampToValueAtTime(0.04, now + 1.0);
+  hissGain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+
+  hissSrc.connect(hissHp);
+  hissHp.connect(hissGain);
+  hissGain.connect(ctx.destination);
+  hissSrc.start(now + 0.8);
+  hissSrc.stop(now + 2.3);
+}
+
+// 잠항 효과음 — 하강 톤 + 물 압력 + 진동
+export function playDivingSound() {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  // 하강 톤 (high → low sweep)
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(400, now);
+  osc.frequency.exponentialRampToValueAtTime(150, now + 1.5);
+  osc.frequency.exponentialRampToValueAtTime(80, now + 2.0);
+
+  const oscGain = ctx.createGain();
+  oscGain.gain.setValueAtTime(0, now);
+  oscGain.gain.linearRampToValueAtTime(0.07, now + 0.15);
+  oscGain.gain.setValueAtTime(0.07, now + 1.0);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(1000, now);
+  lp.frequency.linearRampToValueAtTime(200, now + 2.0);
+
+  osc.connect(lp);
+  lp.connect(oscGain);
+  oscGain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 2.0);
+
+  // 물 압력 노이즈 (브라운 노이즈)
+  const pressureBuffer = createBrownNoiseBuffer(ctx, 2);
+  const pressureSrc = ctx.createBufferSource();
+  pressureSrc.buffer = pressureBuffer;
+
+  const pressureLp = ctx.createBiquadFilter();
+  pressureLp.type = "lowpass";
+  pressureLp.frequency.setValueAtTime(500, now);
+  pressureLp.frequency.linearRampToValueAtTime(150, now + 2.0);
+
+  const pressureGain = ctx.createGain();
+  pressureGain.gain.setValueAtTime(0, now);
+  pressureGain.gain.linearRampToValueAtTime(0.05, now + 0.3);
+  pressureGain.gain.setValueAtTime(0.05, now + 1.0);
+  pressureGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+  pressureSrc.connect(pressureLp);
+  pressureLp.connect(pressureGain);
+  pressureGain.connect(ctx.destination);
+  pressureSrc.start(now);
+  pressureSrc.stop(now + 2.0);
 }
 
 // ============================

@@ -2,16 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  getTrafficOverview,
-  getVoyageAnalytics,
-  getUserList,
-  getUserCounts,
-  TrafficOverview,
-  VoyageAnalytics,
-  UserRow,
-} from "@/lib/adminQueries";
 import { BarChart3, Ship, Users, RefreshCw, ArrowLeft, Globe, Clock, Target, TrendingUp } from "lucide-react";
+
+interface TrafficOverview {
+  visitors: number;
+  pageViews: number;
+  pageBreakdown: { page: string; count: number }[];
+}
+
+interface VoyageAnalytics {
+  completed: number;
+  failed: number;
+  completionRate: number;
+  avgDuration: number;
+  popularRoutes: { from: string; to: string; count: number }[];
+  popularPurposes: { purpose: string; count: number }[];
+}
+
+interface UserRow {
+  id: string;
+  email: string | null;
+  nickname: string | null;
+  created_at: string;
+  last_synced_at: string | null;
+  total_focus_minutes: number;
+  completed_sessions: number;
+  current_streak: number;
+}
 
 type Period = 1 | 7 | 30;
 
@@ -28,16 +45,13 @@ export default function AdminPage() {
   const fetchData = async (days: Period) => {
     setLoading(true);
     try {
-      const [t, v, u, uc] = await Promise.all([
-        getTrafficOverview(days),
-        getVoyageAnalytics(days),
-        getUserList(),
-        getUserCounts(),
-      ]);
-      setTraffic(t);
-      setVoyageStats(v);
-      setUsers(u);
-      setUserCounts(uc);
+      const res = await fetch(`/api/admin/data?days=${days}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setTraffic(json.traffic);
+      setVoyageStats(json.voyageStats);
+      setUsers(json.users || []);
+      setUserCounts(json.userCounts || { total: 0, today: 0, week: 0, month: 0 });
     } catch (e) {
       console.error("Admin fetch error:", e);
     } finally {

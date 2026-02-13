@@ -9,6 +9,8 @@ import {
   playCompleteSound,
   playFailSound,
   playDiveHornSound,
+  playSurfacingSound,
+  playDivingSound,
   resumeAudioContext,
 } from "./soundGenerator";
 
@@ -25,8 +27,15 @@ export type SoundType =
 interface SoundController {
   start: () => void;
   stop: () => void;
-  setVolume?: (v: number) => void;
+  setVolume?: (v: number, rampTime?: number) => void;
 }
+
+// 기본 볼륨 상수
+const DEFAULT_VOLUMES: Record<string, number> = {
+  oceanWaves: 0.03,
+  submarineEngine: 0.07,
+  waterFlow: 0.04,
+};
 
 // 이벤트 효과음 비활성화 — 시각 효과만 유지
 const EVENT_SOUND_MAP: Record<string, () => void> = {};
@@ -78,12 +87,25 @@ class SoundManager {
     }
   }
 
-  fadeIn(type: SoundType, duration?: number) {
-    this.play(type);
+  fadeIn(type: SoundType, duration: number = 1.5) {
+    if (!this.enabled) return;
+    this.ensureInit();
+
+    const sound = this.sounds.get(type);
+    if (!sound) return;
+
+    sound.start();
+    const target = DEFAULT_VOLUMES[type] ?? 0.05;
+    sound.setVolume?.(0, 0);
+    sound.setVolume?.(target, duration);
   }
 
-  fadeOut(type: SoundType, duration?: number) {
-    this.stop(type);
+  fadeOut(type: SoundType, duration: number = 1.5) {
+    const sound = this.sounds.get(type);
+    if (!sound) return;
+
+    sound.setVolume?.(0, duration);
+    setTimeout(() => sound.stop(), duration * 1000 + 100);
   }
 
   stopAll() {
@@ -159,6 +181,38 @@ class SoundManager {
     if (playFn) {
       playFn();
     }
+  }
+
+  // 크로스페이드: 잠항 → 부상 (상승 전환음 포함)
+  crossfadeToSurface(duration: number = 2) {
+    if (!this.enabled) return;
+    this.ensureInit();
+
+    // 전환 효과음 재생
+    playSurfacingSound();
+
+    // 해저 사운드 페이드아웃
+    this.fadeOut("submarineEngine", duration);
+    this.fadeOut("waterFlow", duration);
+
+    // 수면 사운드 페이드인
+    this.fadeIn("oceanWaves", duration);
+  }
+
+  // 크로스페이드: 부상 → 잠항 (하강 전환음 포함)
+  crossfadeToUnderwater(duration: number = 2) {
+    if (!this.enabled) return;
+    this.ensureInit();
+
+    // 전환 효과음 재생
+    playDivingSound();
+
+    // 수면 사운드 페이드아웃
+    this.fadeOut("oceanWaves", duration);
+
+    // 해저 사운드 페이드인 (waterFlow 먼저, engine 300ms 후)
+    this.fadeIn("waterFlow", duration);
+    setTimeout(() => this.fadeIn("submarineEngine", duration), 300);
   }
 }
 
