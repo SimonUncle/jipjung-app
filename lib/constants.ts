@@ -1,5 +1,8 @@
 import { TimerDuration, VoyageTicket, DailyFocusRecord } from "@/types";
 
+// 어드민 이메일
+export const ADMIN_EMAIL = "k01077679687@gmail.com";
+
 // 타이머 옵션 (0.33 = 20초 테스트용)
 export const TIMER_DURATIONS: TimerDuration[] = [0.33, 1, 10, 30, 60];
 

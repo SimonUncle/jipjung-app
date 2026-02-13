@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
 
   // /admin 경로 보호
   if (request.nextUrl.pathname.startsWith("/admin")) {
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    const adminEmail = "k01077679687@gmail.com";
     if (!user || user.email !== adminEmail) {
       return NextResponse.redirect(new URL("/", request.url));
     }
