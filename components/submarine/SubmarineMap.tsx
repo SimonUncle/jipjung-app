@@ -2,7 +2,7 @@
 
 // 잠수함 지도 - Leaflet 기반 + 해저 분위기 + 실제 해상 경로
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -83,14 +83,44 @@ function createSubmarineIcon() {
   });
 }
 
-// 지도 중심 업데이트 컴포넌트
-function MapUpdater({ position }: { position: [number, number] }) {
+// 지도 중심 업데이트 컴포넌트 — 유저 조작 시 추적 해제
+function MapUpdater({ position, tracking, onUserInteract }: {
+  position: [number, number];
+  tracking: boolean;
+  onUserInteract: () => void;
+}) {
+  const map = useMap();
+
+  // 유저가 드래그/줌하면 추적 해제
+  useEffect(() => {
+    const handleInteract = () => onUserInteract();
+    map.on("dragstart", handleInteract);
+    map.on("zoomstart", handleInteract);
+    return () => {
+      map.off("dragstart", handleInteract);
+      map.off("zoomstart", handleInteract);
+    };
+  }, [map, onUserInteract]);
+
+  // 추적 모드일 때만 따라감
+  useEffect(() => {
+    if (tracking) {
+      map.panTo(position, { animate: true, duration: 0.5 });
+    }
+  }, [map, position, tracking]);
+
+  return null;
+}
+
+// 위치 복귀 헬퍼
+function MapRecenter({ position, trigger }: { position: [number, number]; trigger: number }) {
   const map = useMap();
 
   useEffect(() => {
-    // 부드럽게 이동
-    map.panTo(position, { animate: true, duration: 0.5 });
-  }, [map, position]);
+    if (trigger > 0) {
+      map.flyTo(position, 5, { animate: true, duration: 1 });
+    }
+  }, [map, position, trigger]);
 
   return null;
 }
@@ -99,6 +129,17 @@ export default function SubmarineMap({ progress, seaRoute, activeEvents = [], ph
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [particles, setParticles] = useState<Particle[]>([]);
   const [sonarPings, setSonarPings] = useState<SonarPing[]>([]);
+  const [tracking, setTracking] = useState(true);
+  const [recenterTrigger, setRecenterTrigger] = useState(0);
+
+  const handleUserInteract = useCallback(() => {
+    setTracking(false);
+  }, []);
+
+  const handleRecenter = useCallback(() => {
+    setTracking(true);
+    setRecenterTrigger(prev => prev + 1);
+  }, []);
 
   // 사용할 경로 결정 (실제 경로 or 기본 경로)
   const route = useMemo(() => {
@@ -325,8 +366,30 @@ export default function SubmarineMap({ progress, seaRoute, activeEvents = [], ph
         )}
 
         {/* 지도 중심 업데이트 */}
-        <MapUpdater position={currentPosition} />
+        <MapUpdater position={currentPosition} tracking={tracking} onUserInteract={handleUserInteract} />
+        <MapRecenter position={currentPosition} trigger={recenterTrigger} />
       </MapContainer>
+
+      {/* 위치 복귀 버튼 — 추적 해제 시에만 표시 */}
+      {!tracking && (
+        <button
+          onClick={handleRecenter}
+          className="absolute top-3 right-3 z-[1010] flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all active:scale-95"
+          style={{
+            background: "rgba(15,23,42,0.8)",
+            border: "1px solid rgba(34,211,238,0.4)",
+            color: "#22d3ee",
+            boxShadow: "0 0 12px rgba(34,211,238,0.15)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+          </svg>
+          잠수함 위치
+        </button>
+      )}
 
       {/* === 해저 분위기 오버레이 (z-index 높게) === */}
 
