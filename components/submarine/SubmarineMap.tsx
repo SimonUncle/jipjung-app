@@ -219,6 +219,9 @@ export default function SubmarineMap({ progress, seaRoute, activeEvents = [], ph
       <MapContainer
         center={[34.5, 134]}
         zoom={5}
+        minZoom={3}
+        maxBounds={[[-85, -180], [85, 180]]}
+        maxBoundsViscosity={1.0}
         className="w-full h-full"
         zoomControl={false}
         attributionControl={false}
@@ -228,6 +231,7 @@ export default function SubmarineMap({ progress, seaRoute, activeEvents = [], ph
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           attribution=""
+          noWrap={true}
         />
 
         {/* 전체 경로 - 점선 (추상적 해저 터널 느낌) */}

@@ -26,6 +26,7 @@ export function UnderwaterView({ progress = 0, phase = "open_ocean", depth = 200
   const [largeCreatures, setLargeCreatures] = useState<LargeCreature[]>([]);
   const [fishSchools, setFishSchools] = useState<FishSchool[]>([]);
   const [events, setEvents] = useState<UnderwaterEvent[]>([]);
+  const [lightOn, setLightOn] = useState(false);
 
   // 이벤트 체크
   const hasDeepTrench = activeEvents.some(e => e.event.type === "deep_trench");
@@ -38,17 +39,22 @@ export function UnderwaterView({ progress = 0, phase = "open_ocean", depth = 200
 
   // 수심 기반 배경 그라데이션
   const depthGradient = useMemo(() => {
+    if (lightOn) {
+      // 라이트 ON: 심해에서도 중간 깊이 수준 밝기
+      return "linear-gradient(180deg, #0c3547 0%, #0a2d42 10%, #08263d 25%, #061f35 40%, #05192e 55%, #041427 70%, #030f20 85%, #020a18 100%)";
+    }
     if (depth < 100) return "linear-gradient(180deg, #0e4a6e 0%, #0c3d5e 30%, #0a3050 60%, #082545 80%, #061f3a 100%)";
     if (depth > 250) return "linear-gradient(180deg, #030a18 0%, #020815 30%, #020610 60%, #01050c 80%, #010308 100%)";
     return "linear-gradient(180deg, #0c3547 0%, #0a2d42 10%, #08263d 25%, #061f35 40%, #05192e 55%, #041427 70%, #030f20 85%, #020a18 100%)";
-  }, [depth]);
+  }, [depth, lightOn]);
 
   // 수심 기반 갓레이 투명도
   const godRayOpacity = useMemo(() => {
+    if (lightOn) return Math.max(0.4, depth < 100 ? 1.0 : 1.0 - ((depth - 100) / 200) * 0.6);
     if (depth < 100) return 1.0;
     if (depth > 300) return 0.1;
     return 1.0 - ((depth - 100) / 200) * 0.9;
-  }, [depth]);
+  }, [depth, lightOn]);
 
   useEffect(() => {
     const newParticles: Particle[] = Array.from({ length: 25 }, (_, i) => ({
@@ -627,6 +633,36 @@ export function UnderwaterView({ progress = 0, phase = "open_ocean", depth = 200
         background: "linear-gradient(180deg, rgba(8,35,55,0) 0%, rgba(5,20,38,0.3) 50%, rgba(3,12,25,0.5) 100%)",
         mixBlendMode: "multiply",
       }} />
+
+      {/* 스포트라이트 효과 (라이트 ON 시) */}
+      {lightOn && (
+        <div
+          className="absolute inset-0 pointer-events-none transition-opacity duration-500"
+          style={{
+            background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(140,200,220,0.12) 0%, rgba(100,160,180,0.06) 30%, transparent 70%)",
+          }}
+        />
+      )}
+
+      {/* 라이트 토글 버튼 */}
+      <button
+        onClick={() => setLightOn(prev => !prev)}
+        className="absolute bottom-20 right-5 z-20 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90"
+        style={{
+          background: lightOn
+            ? "radial-gradient(circle, rgba(250,204,21,0.3) 0%, rgba(250,204,21,0.1) 60%, rgba(30,40,55,0.8) 100%)"
+            : "rgba(30,40,55,0.6)",
+          border: lightOn ? "2px solid rgba(250,204,21,0.5)" : "2px solid rgba(255,255,255,0.15)",
+          boxShadow: lightOn ? "0 0 20px rgba(250,204,21,0.3)" : "none",
+        }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={lightOn ? "#facc15" : "#94a3b8"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 18h6" />
+          <path d="M10 22h4" />
+          <path d="M12 2v1" />
+          <path d="M12 5a5 5 0 0 1 5 5c0 2.76-2.5 5-5 7-2.5-2-5-4.24-5-7a5 5 0 0 1 5-5z" fill={lightOn ? "rgba(250,204,21,0.3)" : "none"} />
+        </svg>
+      </button>
 
       {/* 잠수함 창문 프레임 */}
       <div className="absolute inset-0 pointer-events-none">
