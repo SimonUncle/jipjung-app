@@ -436,10 +436,12 @@ export default function HomePage() {
           href="https://buymeacoffee.com/simonwryan"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 py-2 text-white/30 hover:text-pink-400/70 transition-colors text-xs"
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 min-h-[44px] rounded-xl
+                   bg-pink-500/10 border border-pink-500/20 text-pink-300/80
+                   hover:bg-pink-500/20 hover:text-pink-300 transition-all"
         >
-          <Heart className="w-3 h-3" />
-          <span>개발자에게 커피 사주기</span>
+          <Heart className="w-4 h-4" />
+          <span className="text-sm">개발자에게 커피 사주기</span>
         </a>
       </div>
 
