@@ -1,11 +1,21 @@
 "use client";
 
+import { useMemo } from "react";
+
 interface SocialButtonsProps {
   onGoogleLogin: () => void;
   onKakaoLogin: () => void;
 }
 
+function isInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /KAKAOTALK|Instagram|FBAN|FBAV|LINE|NAVER|Daum|Snapchat/i.test(ua);
+}
+
 export function SocialButtons({ onGoogleLogin, onKakaoLogin }: SocialButtonsProps) {
+  const inApp = useMemo(() => isInAppBrowser(), []);
+
   return (
     <>
       {/* 구분선 */}
@@ -32,11 +42,20 @@ export function SocialButtons({ onGoogleLogin, onKakaoLogin }: SocialButtonsProp
       <button
         type="button"
         onClick={onGoogleLogin}
-        className="w-full py-3 rounded-xl font-medium bg-white text-gray-800 hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
+        className={`w-full py-3 rounded-xl font-medium bg-white text-gray-800 hover:bg-gray-100 transition-all flex items-center justify-center gap-2 ${
+          inApp ? "opacity-50" : ""
+        }`}
       >
         <GoogleIcon className="w-5 h-5" />
         Google로 계속하기
       </button>
+
+      {/* 인앱 브라우저 안내 */}
+      {inApp && (
+        <p className="text-xs text-amber-400/80 text-center">
+          인앱 브라우저에서는 Google 로그인이 제한됩니다. 카카오 로그인을 이용해주세요.
+        </p>
+      )}
     </>
   );
 }
