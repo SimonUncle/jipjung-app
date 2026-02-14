@@ -17,6 +17,21 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Focus Submarine",
   },
+  openGraph: {
+    title: "Focus Submarine",
+    description: "집중하면 잠수함이 목적지를 향해 잠항하는 감성 집중 타이머",
+    url: "https://jipjung.vercel.app",
+    siteName: "Focus Submarine",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    type: "website",
+    locale: "ko_KR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Focus Submarine",
+    description: "집중하면 잠수함이 목적지를 향해 잠항하는 감성 집중 타이머",
+    images: ["/og-image.png"],
+  },
 };
 
 export const viewport: Viewport = {

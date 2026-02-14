@@ -15,7 +15,7 @@ import { getSeaRoute } from "@/lib/seaRoutes";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { formatMinutes } from "@/hooks/useTimer";
 import { FocusPurpose } from "@/lib/focusPurposes";
-import { Anchor, BarChart3, Clock, Settings, User, LogOut } from "lucide-react";
+import { Anchor, BarChart3, Clock, Heart, Settings, User, LogOut } from "lucide-react";
 import { SubmarineIcon } from "@/components/submarine/SubmarineIcon";
 import { useAuthContext } from "@/components/auth/AuthProvider";
 import { LoginModal } from "@/components/auth/LoginModal";
@@ -420,7 +420,7 @@ export default function HomePage() {
       </div>
 
       {/* Navigation link */}
-      <div className="px-4 sm:px-6 pb-8 safe-area-bottom">
+      <div className="px-4 sm:px-6 pb-8 safe-area-bottom space-y-3">
         <button
           onClick={() => router.push("/stats")}
           className="w-full flex items-center justify-center gap-2 py-3 px-4 min-h-[44px] rounded-xl
@@ -430,6 +430,17 @@ export default function HomePage() {
           <BarChart3 className="w-4 h-4" />
           <span className="text-sm">내 기록</span>
         </button>
+
+        {/* 후원 링크 */}
+        <a
+          href="https://buymeacoffee.com/simonwryan"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 py-2 text-white/30 hover:text-pink-400/70 transition-colors text-xs"
+        >
+          <Heart className="w-3 h-3" />
+          <span>개발자에게 커피 사주기</span>
+        </a>
       </div>
 
       {/* Focus Purpose Modal */}
