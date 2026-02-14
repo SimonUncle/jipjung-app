@@ -122,16 +122,16 @@ function MapController({ position, tracking, recenterTrigger, onUserInteract }: 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, recenterTrigger]);
 
-  // 추적 모드일 때 잠수함 따라감
+  // 추적 모드일 때 잠수함 따라감 (recenter flyTo 중이면 스킵)
   useEffect(() => {
-    if (tracking && recenterTrigger === lastTrigger.current) {
+    if (tracking && !programmatic.current) {
       programmatic.current = true;
       map.panTo(position, { animate: true, duration: 0.5 });
       map.once("moveend", () => {
         programmatic.current = false;
       });
     }
-  }, [map, position, tracking, recenterTrigger]);
+  }, [map, position, tracking]);
 
   return null;
 }
