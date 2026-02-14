@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://jipjung-app.vercel.app"),
   title: "Focus Submarine",
   description: "집중하면 잠수함이 목적지를 향해 잠항하는 감성 집중 타이머",
   manifest: "/manifest.json",
@@ -22,7 +23,6 @@ export const metadata: Metadata = {
     description: "집중하면 잠수함이 목적지를 향해 잠항하는 감성 집중 타이머",
     url: "https://jipjung-app.vercel.app",
     siteName: "Focus Submarine",
-    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
     type: "website",
     locale: "ko_KR",
   },
@@ -30,7 +30,6 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Focus Submarine",
     description: "집중하면 잠수함이 목적지를 향해 잠항하는 감성 집중 타이머",
-    images: ["/og-image.png"],
   },
   verification: {
     google: "n-qG_vyFEswEHZFV0u53YBFwbPUFDa_cTqFCBrOAcIY",
@@ -52,6 +51,29 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              name: "Focus Submarine",
+              description:
+                "집중하면 잠수함이 목적지를 향해 잠항하는 감성 집중 타이머",
+              url: "https://jipjung-app.vercel.app",
+              applicationCategory: "ProductivityApplication",
+              operatingSystem: "Web",
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "KRW",
+              },
+              inLanguage: "ko",
+            }),
+          }}
+        />
+      </head>
       <body className="bg-dark-bg text-white antialiased">
         <AuthProvider>
           <main className="min-h-screen flex flex-col">{children}</main>
