@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useVoyageStore, getTraveledDistance } from "@/stores/voyageStore";
 import { useUnlockStore } from "@/stores/unlockStore";
@@ -47,6 +47,23 @@ export default function ArrivalPage() {
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
   const [showAchievements, setShowAchievements] = useState(false);
   const [ticketSaved, setTicketSaved] = useState(false);
+  const syncDone = useRef(false);
+
+  // Supabase 동기화 — user 비동기 로드 완료 후 실행 (레이스 컨디션 방지)
+  useEffect(() => {
+    if (ticketSaved && user?.id && !syncDone.current) {
+      syncDone.current = true;
+      const raw = localStorage.getItem("climb-focus-data");
+      if (raw) {
+        const freshData = JSON.parse(raw);
+        const latestTicket = freshData.voyageHistory?.[freshData.voyageHistory.length - 1];
+        if (latestTicket) {
+          syncVoyage(user.id, latestTicket, user.email).catch(() => {});
+          syncUserStats(user.id, freshData, user.email).catch(() => {});
+        }
+      }
+    }
+  }, [ticketSaved, user]);
 
   useEffect(() => {
     if (!arrivalPort || !departurePort) {
@@ -72,20 +89,15 @@ export default function ArrivalPage() {
       };
       addVoyageTicket(ticket);
 
-      // Supabase 동기화 + 이벤트 트래킹 (fire-and-forget)
-      if (user?.id) {
-        syncVoyage(user.id, ticket, user.email).catch(() => {});
-        // stats는 addVoyageTicket 후 data가 업데이트되므로 약간 딜레이
-        setTimeout(() => {
-          const freshData = JSON.parse(localStorage.getItem("climb-focus-data") || "{}");
-          if (freshData.stats) syncUserStats(user.id, freshData, user.email).catch(() => {});
-        }, 200);
-      }
+      // 이벤트 트래킹 (인증 불필요, 항상 실행)
       track("voyage_complete", {
         from: departurePort.id,
         to: arrivalPort.id,
         duration: selectedDuration,
         distance: distance,
+        focusPurpose: focusPurpose?.id === "custom"
+          ? customPurposeText
+          : focusPurpose?.labelKo || null,
       });
 
       // 방문 항구 추가

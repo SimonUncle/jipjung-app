@@ -61,13 +61,12 @@ export async function GET(request: NextRequest) {
 
     const traffic = { visitors: sessionIds.size, pageViews, pageBreakdown };
 
-    // ---- Voyages ----
-    const { data: voyages } = await supabase
-      .from("voyages")
-      .select("departure_port, arrival_port, duration, focus_purpose")
-      .gte("completed_at", sinceStr);
-
-    const completed = voyages?.length || 0;
+    // ---- Voyages (analytics_events 기반) ----
+    const { data: completeEvents } = await supabase
+      .from("analytics_events")
+      .select("id, event_data")
+      .eq("event_type", "voyage_complete")
+      .gte("created_at", sinceStr);
 
     const { data: failEvents } = await supabase
       .from("analytics_events")
@@ -75,16 +74,24 @@ export async function GET(request: NextRequest) {
       .eq("event_type", "voyage_fail")
       .gte("created_at", sinceStr);
 
+    const completed = completeEvents?.length || 0;
     const failed = failEvents?.length || 0;
     const total = completed + failed;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-    const avgDuration =
-      completed > 0 ? Math.round(voyages!.reduce((sum: number, v: { duration: number }) => sum + v.duration, 0) / completed) : 0;
+
+    // event_data에서 duration, route, purpose 추출
+    const avgDuration = completed > 0
+      ? Math.round((completeEvents || []).reduce((sum: number, e: { event_data: Record<string, unknown> }) => sum + (Number(e.event_data?.duration) || 0), 0) / completed)
+      : 0;
 
     const routeCounts: Record<string, number> = {};
-    voyages?.forEach((v: { departure_port: string; arrival_port: string }) => {
-      const key = `${v.departure_port}→${v.arrival_port}`;
-      routeCounts[key] = (routeCounts[key] || 0) + 1;
+    (completeEvents || []).forEach((e: { event_data: Record<string, unknown> }) => {
+      const from = e.event_data?.from as string;
+      const to = e.event_data?.to as string;
+      if (from && to) {
+        const key = `${from}→${to}`;
+        routeCounts[key] = (routeCounts[key] || 0) + 1;
+      }
     });
     const popularRoutes = Object.entries(routeCounts)
       .map(([route, count]) => {
@@ -95,9 +102,10 @@ export async function GET(request: NextRequest) {
       .slice(0, 5);
 
     const purposeCounts: Record<string, number> = {};
-    voyages?.forEach((v: { focus_purpose: string | null }) => {
-      if (v.focus_purpose) {
-        purposeCounts[v.focus_purpose] = (purposeCounts[v.focus_purpose] || 0) + 1;
+    (completeEvents || []).forEach((e: { event_data: Record<string, unknown> }) => {
+      const purpose = e.event_data?.focusPurpose as string;
+      if (purpose) {
+        purposeCounts[purpose] = (purposeCounts[purpose] || 0) + 1;
       }
     });
     const popularPurposes = Object.entries(purposeCounts)
