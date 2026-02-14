@@ -32,6 +32,9 @@ export const metadata: Metadata = {
     description: "집중하면 잠수함이 목적지를 향해 잠항하는 감성 집중 타이머",
     images: ["/og-image.png"],
   },
+  verification: {
+    google: "n-qG_vyFEswEHZFV0u53YBFwbPUFDa_cTqFCBrOAcIY",
+  },
 };
 
 export const viewport: Viewport = {
