@@ -93,7 +93,7 @@ create index if not exists idx_events_user on analytics_events(user_id);
 create or replace function public.is_admin()
 returns boolean as $$
 begin
-  return (select email from auth.users where id = auth.uid()) = 'k01077679687@gmail.com';
+  return (select email from auth.users where id = auth.uid()) in ('k01077679687@gmail.com', 'kingapple1369@gmail.com');
 end;
 $$ language plpgsql security definer;
 

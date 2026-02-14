@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createServiceClient } from "@/lib/supabaseServer";
-import { ADMIN_EMAIL } from "@/lib/constants";
+import { ADMIN_EMAILS } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   // 1. 인증 확인: 쿠키에서 세션 읽어 admin 이메일 체크
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   });
 
   const { data: { user } } = await supabaseAuth.auth.getUser();
-  if (!user || user.email !== ADMIN_EMAIL) {
+  if (!user || !ADMIN_EMAILS.includes(user.email || "")) {
     return NextResponse.json({ error: "unauthorized" }, { status: 403 });
   }
 

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { ADMIN_EMAILS } from "@/lib/constants";
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -37,8 +38,7 @@ export async function middleware(request: NextRequest) {
 
   // /admin 경로 보호
   if (request.nextUrl.pathname.startsWith("/admin")) {
-    const adminEmail = "k01077679687@gmail.com";
-    if (!user || user.email !== adminEmail) {
+    if (!user || !ADMIN_EMAILS.includes(user.email || "")) {
       return NextResponse.redirect(new URL("/", request.url));
     }
   }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/components/auth/AuthProvider";
 
-import { ADMIN_EMAIL } from "@/lib/constants";
+import { ADMIN_EMAILS } from "@/lib/constants";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isAuthenticated } = useAuthContext();
@@ -14,7 +14,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (isLoading) return;
 
-    if (!isAuthenticated || user?.email !== ADMIN_EMAIL) {
+    if (!isAuthenticated || !ADMIN_EMAILS.includes(user?.email || "")) {
       router.replace("/");
       return;
     }
