@@ -133,7 +133,7 @@ export default async function Image() {
             display: "flex",
           }}
         >
-          jipjung.vercel.app
+          jipjung-app.vercel.app
         </div>
       </div>
     ),

@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/admin", "/api/"],
     },
-    sitemap: "https://jipjung.vercel.app/sitemap.xml",
+    sitemap: "https://jipjung-app.vercel.app/sitemap.xml",
   };
 }
