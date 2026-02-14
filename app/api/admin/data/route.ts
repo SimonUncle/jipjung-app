@@ -128,27 +128,30 @@ export async function GET(request: NextRequest) {
 
     const voyageStats = { completed, failed, completionRate, avgDuration, popularRoutes, popularPurposes };
 
-    // ---- Users ----
-    const { data: users } = await supabase
-      .from("users")
-      .select("id, email, nickname, created_at, last_synced_at")
-      .order("created_at", { ascending: false });
+    // ---- Users (auth.admin.listUsers로 직접 조회) ----
+    const { data: { users: authUsers }, error: authUsersError } = await supabase.auth.admin.listUsers();
+    if (authUsersError) console.error("[admin] listUsers error:", authUsersError.message);
 
-    const userIds = (users || []).map((u: { id: string }) => u.id);
-    const { data: stats } = userIds.length > 0
-      ? await supabase.from("user_stats").select("user_id, total_focus_minutes, completed_sessions, current_streak").in("user_id", userIds)
+    const allAuthUsers = (authUsers || []).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    // user_stats 조인 (있으면 통계 표시, 없으면 0)
+    const authUserIds = allAuthUsers.map(u => u.id);
+    const { data: stats } = authUserIds.length > 0
+      ? await supabase.from("user_stats").select("user_id, total_focus_minutes, completed_sessions, current_streak").in("user_id", authUserIds)
       : { data: [] };
 
     const statsMap = new Map((stats || []).map((s: { user_id: string }) => [s.user_id, s]));
 
-    const userList = (users || []).map((u: { id: string; email: string | null; nickname: string | null; created_at: string; last_synced_at: string | null }) => {
+    const userList = allAuthUsers.map(u => {
       const s = statsMap.get(u.id) as { total_focus_minutes?: number; completed_sessions?: number; current_streak?: number } | undefined;
       return {
         id: u.id,
-        email: u.email,
-        nickname: u.nickname,
+        email: u.email || null,
+        nickname: u.user_metadata?.nickname || null,
         created_at: u.created_at,
-        last_synced_at: u.last_synced_at,
+        last_synced_at: null,
         total_focus_minutes: s?.total_focus_minutes || 0,
         completed_sessions: s?.completed_sessions || 0,
         current_streak: s?.current_streak || 0,
@@ -160,13 +163,12 @@ export async function GET(request: NextRequest) {
     const todayStr = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
     const weekStr = new Date(now.getTime() - 7 * 86400000).toISOString();
     const monthStr = new Date(now.getTime() - 30 * 86400000).toISOString();
-    const all = users || [];
 
     const userCounts = {
-      total: all.length,
-      today: all.filter((u: { created_at: string }) => u.created_at >= todayStr).length,
-      week: all.filter((u: { created_at: string }) => u.created_at >= weekStr).length,
-      month: all.filter((u: { created_at: string }) => u.created_at >= monthStr).length,
+      total: allAuthUsers.length,
+      today: allAuthUsers.filter(u => u.created_at >= todayStr).length,
+      week: allAuthUsers.filter(u => u.created_at >= weekStr).length,
+      month: allAuthUsers.filter(u => u.created_at >= monthStr).length,
     };
 
     return NextResponse.json({ traffic, voyageStats, users: userList, userCounts, adminActivity });
