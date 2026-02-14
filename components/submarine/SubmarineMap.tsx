@@ -2,7 +2,7 @@
 
 // 잠수함 지도 - Leaflet 기반 + 해저 분위기 + 실제 해상 경로
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -83,17 +83,24 @@ function createSubmarineIcon() {
   });
 }
 
-// 지도 중심 업데이트 컴포넌트 — 유저 조작 시 추적 해제
-function MapUpdater({ position, tracking, onUserInteract }: {
+// 지도 중심 업데이트 + 위치 복귀 통합 컴포넌트
+function MapController({ position, tracking, recenterTrigger, onUserInteract }: {
   position: [number, number];
   tracking: boolean;
+  recenterTrigger: number;
   onUserInteract: () => void;
 }) {
   const map = useMap();
+  const programmatic = useRef(false);
+  const lastTrigger = useRef(0);
 
-  // 유저가 드래그/줌하면 추적 해제
+  // 유저가 드래그/줌하면 추적 해제 (프로그래밍 이동은 무시)
   useEffect(() => {
-    const handleInteract = () => onUserInteract();
+    const handleInteract = () => {
+      if (!programmatic.current) {
+        onUserInteract();
+      }
+    };
     map.on("dragstart", handleInteract);
     map.on("zoomstart", handleInteract);
     return () => {
@@ -102,25 +109,29 @@ function MapUpdater({ position, tracking, onUserInteract }: {
     };
   }, [map, onUserInteract]);
 
-  // 추적 모드일 때만 따라감
+  // recenter 버튼 클릭 시 flyTo (trigger 변경 시에만)
   useEffect(() => {
-    if (tracking) {
-      map.panTo(position, { animate: true, duration: 0.5 });
-    }
-  }, [map, position, tracking]);
-
-  return null;
-}
-
-// 위치 복귀 헬퍼
-function MapRecenter({ position, trigger }: { position: [number, number]; trigger: number }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (trigger > 0) {
+    if (recenterTrigger > 0 && recenterTrigger !== lastTrigger.current) {
+      lastTrigger.current = recenterTrigger;
+      programmatic.current = true;
       map.flyTo(position, 5, { animate: true, duration: 1 });
+      map.once("moveend", () => {
+        programmatic.current = false;
+      });
     }
-  }, [map, position, trigger]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, recenterTrigger]);
+
+  // 추적 모드일 때 잠수함 따라감
+  useEffect(() => {
+    if (tracking && recenterTrigger === lastTrigger.current) {
+      programmatic.current = true;
+      map.panTo(position, { animate: true, duration: 0.5 });
+      map.once("moveend", () => {
+        programmatic.current = false;
+      });
+    }
+  }, [map, position, tracking, recenterTrigger]);
 
   return null;
 }
@@ -365,9 +376,13 @@ export default function SubmarineMap({ progress, seaRoute, activeEvents = [], ph
           </>
         )}
 
-        {/* 지도 중심 업데이트 */}
-        <MapUpdater position={currentPosition} tracking={tracking} onUserInteract={handleUserInteract} />
-        <MapRecenter position={currentPosition} trigger={recenterTrigger} />
+        {/* 지도 중심 업데이트 + 위치 복귀 */}
+        <MapController
+          position={currentPosition}
+          tracking={tracking}
+          recenterTrigger={recenterTrigger}
+          onUserInteract={handleUserInteract}
+        />
       </MapContainer>
 
       {/* 위치 복귀 버튼 — 추적 해제 시에만 표시 */}
