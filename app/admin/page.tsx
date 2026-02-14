@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Ship, Users, RefreshCw, ArrowLeft, Globe, Clock, Target, TrendingUp } from "lucide-react";
+import { BarChart3, Ship, Users, RefreshCw, ArrowLeft, Globe, Clock, Target, TrendingUp, Eye } from "lucide-react";
 
 interface TrafficOverview {
   visitors: number;
@@ -41,6 +41,7 @@ export default function AdminPage() {
   const [voyageStats, setVoyageStats] = useState<VoyageAnalytics | null>(null);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [userCounts, setUserCounts] = useState({ total: 0, today: 0, week: 0, month: 0 });
+  const [adminActivity, setAdminActivity] = useState<{ visits: number; lastVisit: string | null }>({ visits: 0, lastVisit: null });
 
   const fetchData = async (days: Period) => {
     setLoading(true);
@@ -52,6 +53,7 @@ export default function AdminPage() {
       setVoyageStats(json.voyageStats);
       setUsers(json.users || []);
       setUserCounts(json.userCounts || { total: 0, today: 0, week: 0, month: 0 });
+      setAdminActivity(json.adminActivity || { visits: 0, lastVisit: null });
     } catch (e) {
       console.error("Admin fetch error:", e);
     } finally {
@@ -280,6 +282,26 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </section>
+
+        {/* ============================================ */}
+        {/* 섹션 4: 어드민 흔적 */}
+        {/* ============================================ */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Eye className="w-4 h-4 text-slate-500" />
+            <h2 className="text-sm font-medium text-slate-500">Admin Activity</h2>
+          </div>
+          <div className="bg-white/5 rounded-lg p-3 border border-white/5 text-xs text-slate-500 flex items-center justify-between">
+            <span>/admin 방문 {adminActivity.visits}회</span>
+            {adminActivity.lastVisit && (
+              <span>
+                마지막: {new Date(adminActivity.lastVisit).toLocaleDateString("ko-KR", {
+                  month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                })}
+              </span>
+            )}
           </div>
         </section>
 

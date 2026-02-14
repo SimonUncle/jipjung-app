@@ -42,16 +42,21 @@ export async function GET(request: NextRequest) {
     // ---- Traffic ----
     const { data: events } = await supabase
       .from("analytics_events")
-      .select("session_id, event_data")
+      .select("session_id, event_data, created_at")
       .eq("event_type", "page_view")
       .gte("created_at", sinceStr);
 
-    const rows = events || [];
-    const sessionIds = new Set(rows.map((e: { session_id: string }) => e.session_id).filter(Boolean));
-    const pageViews = rows.length;
+    const allRows = events || [];
+
+    // /admin 페이지 분리
+    const userRows = allRows.filter((e: { event_data: Record<string, string> }) => e.event_data?.page !== "/admin");
+    const adminRows = allRows.filter((e: { event_data: Record<string, string> }) => e.event_data?.page === "/admin");
+
+    const sessionIds = new Set(userRows.map((e: { session_id: string }) => e.session_id).filter(Boolean));
+    const pageViews = userRows.length;
 
     const pageCounts: Record<string, number> = {};
-    rows.forEach((e: { event_data: Record<string, string> }) => {
+    userRows.forEach((e: { event_data: Record<string, string> }) => {
       const page = e.event_data?.page || "unknown";
       pageCounts[page] = (pageCounts[page] || 0) + 1;
     });
@@ -60,6 +65,14 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.count - a.count);
 
     const traffic = { visitors: sessionIds.size, pageViews, pageBreakdown };
+
+    // 어드민 활동
+    const adminActivity = {
+      visits: adminRows.length,
+      lastVisit: adminRows.length > 0
+        ? adminRows.sort((a: { created_at: string }, b: { created_at: string }) => b.created_at.localeCompare(a.created_at))[0].created_at
+        : null,
+    };
 
     // ---- Voyages (analytics_events 기반) ----
     const { data: completeEvents } = await supabase
@@ -156,7 +169,7 @@ export async function GET(request: NextRequest) {
       month: all.filter((u: { created_at: string }) => u.created_at >= monthStr).length,
     };
 
-    return NextResponse.json({ traffic, voyageStats, users: userList, userCounts });
+    return NextResponse.json({ traffic, voyageStats, users: userList, userCounts, adminActivity });
   } catch (e) {
     console.error("[admin] data fetch error:", e);
     return NextResponse.json({ error: "internal" }, { status: 500 });
